@@ -67,6 +67,26 @@ impl Default for Cpu {
 }
 
 impl Cpu {
+    // Executes a single instruction
+    //
+    // Alternative to execute_instruction(), used by Fab Agon Emulator for
+    // sake of a little efficiency. Ignores some ez80 emulator features not
+    // used by FAE: reset_pending and nmi_pending
+    pub fn fast_execute_instruction(&mut self, sys: &mut dyn Machine) {
+        if self.is_halted() {
+            // The CPU is in HALT state. Only interrupts can execute.
+            return
+        }
+
+        let mut env = Environment::new(&mut self.state, sys);
+        let opcode = self.decoder.decode(&mut env);
+        opcode.execute(&mut env);
+        env.clear_index();
+        env.state.clear_sz_prefix();
+        env.state.instructions_executed += 1;
+        env.state.reg.set8(Reg8::R, env.state.reg.get8(Reg8::R).wrapping_add(1));
+    }
+
     /// Executes a single instruction
     ///
     /// # Arguments
@@ -103,7 +123,6 @@ impl Cpu {
             print!("==> {:06x}: {:20}", pc, opcode.disasm(&env).0);
         }
         opcode.execute(&mut env);
-        env.state.cached_instruction = env.state.pc() == pc;
         env.clear_index();
         env.state.clear_sz_prefix();
         env.state.instructions_executed += 1;

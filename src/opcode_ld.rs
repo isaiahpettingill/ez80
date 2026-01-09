@@ -49,8 +49,28 @@ use super::registers::*;
         TODO: ix and iy based opcodes-
 */
 
+pub fn build_ld_a_r_or_i(src: Reg8) -> Opcode {
+    assert!(src == Reg8::R || src == Reg8::I);
+    Opcode {
+        name: format!("LD A, {}", src),
+        action: Box::new(move |env: &mut Environment| {
+            let value = env.state.reg.get8(src);
+            env.state.reg.set8(Reg8::A, value);
+
+            // special case. does set some flags
+            env.state.reg.put_flag(Flag::N, false);
+            env.state.reg.put_flag(Flag::H, false);
+            env.state.reg.put_flag(Flag::Z, value == 0);
+            env.state.reg.put_flag(Flag::S, (value as i8) < 0);
+            env.state.reg.put_flag(Flag::P, env.state.reg.iff2);
+        })
+    }
+}
+
 // 8 bit load
 pub fn build_ld_r_r(dst: Reg8, src: Reg8, _special: bool) -> Opcode {
+    assert_ne!(src, Reg8::R);
+    assert_ne!(src, Reg8::I);
     if src != Reg8::_HL && dst != Reg8::_HL
             && src != Reg8::H && dst != Reg8::H
             && src != Reg8::L && dst != Reg8::L {
@@ -60,15 +80,6 @@ pub fn build_ld_r_r(dst: Reg8, src: Reg8, _special: bool) -> Opcode {
             action: Box::new(move |env: &mut Environment| {
                 let value = env.state.reg.get8(src);
                 env.state.reg.set8(dst, value);
-
-                if dst == Reg8::A && (src == Reg8::R || src == Reg8::I) {
-                    // special case. does set some flags
-                    env.state.reg.put_flag(Flag::N, false);
-                    env.state.reg.put_flag(Flag::H, false);
-                    env.state.reg.put_flag(Flag::Z, value == 0);
-                    env.state.reg.put_flag(Flag::S, (value as i8) < 0);
-                    env.state.reg.put_flag(Flag::P, env.state.reg.iff2);
-                }
             })
         }
     } else {

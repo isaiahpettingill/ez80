@@ -214,6 +214,9 @@ pub fn build_otirx_or_otdrx(inc: bool) -> Opcode {
                 } else {
                     env.sys.use_cycles(-1);
                 }
+                env.state.cached_instruction = true;
+            } else {
+                env.state.cached_instruction = false;
             }
         })
     }

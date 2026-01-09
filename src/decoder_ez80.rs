@@ -514,8 +514,8 @@ impl DecoderEZ80 {
                     7 => match p.y {
                         0 => Some(build_ld_r_r(Reg8::I, Reg8::A, true)), // LD I, A
                         1 => Some(build_ld_r_r(Reg8::R, Reg8::A, true)), // LD R, A
-                        2 => Some(build_ld_r_r(Reg8::A, Reg8::I, true)), // LD A, I
-                        3 => Some(build_ld_r_r(Reg8::A, Reg8::R, true)), // LD A, R
+                        2 => Some(build_ld_a_r_or_i(Reg8::I)), // LD A, I
+                        3 => Some(build_ld_a_r_or_i(Reg8::R)), // LD A, R
                         4 => Some(build_rxd(ShiftDir::Right, "RRD")), // RRD
                         5 => Some(build_rxd(ShiftDir::Left, "RLD")),  // RLD
                         6 => Some(build_nop()), // NOP
