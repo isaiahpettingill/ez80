@@ -70,6 +70,11 @@ pub fn build_rot_r(r: Reg8, (dir, mode, name): (ShiftDir, ShiftMode, &str), fast
             }
             env.set_reg(r, v);
 
+            if r == Reg8::_HL {
+                // 1 internal cycle
+                env.sys.use_cycles(1);
+            }
+
             env.state.reg.put_flag(Flag::C, carry);
             env.state.reg.update_hn_flags(false, false);
             if fast {
@@ -95,6 +100,9 @@ pub fn build_bit_r(n: u8, r: Reg8) -> Opcode {
 
 
             if r == Reg8::_HL {
+                // 1 internal cycle
+                env.sys.use_cycles(1);
+
                 // Exceptions for (IX+d) TUZD-4-1
                 /* With the BIT n,(IX+d) instructions, the flags behave just
                 like the BIT n,r instruction, except for YF and XF. These are
@@ -128,6 +136,11 @@ pub fn build_set_res_r(bit: u8, r: Reg8, value: bool) -> Opcode {
                 v |= 1<<bit;
             } else {
                 v &= !(1<<bit);
+            }
+
+            if r == Reg8::_HL {
+                // 1 internal cycle
+		env.sys.use_cycles(1);
             }
 
             env.set_reg(r, v);

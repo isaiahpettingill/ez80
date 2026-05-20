@@ -65,6 +65,9 @@ pub fn build_inc_r(r: Reg8) -> Opcode {
         action: Box::new(move |env: &mut Environment| {
             let a = env.reg8_ext(r);
             let v = operator_inc(env, a);
+            if r == Reg8::_HL {
+		env.sys.use_cycles(1);
+            }
             env.set_reg(r, v);
         })
     }
@@ -76,6 +79,10 @@ pub fn build_dec_r(r: Reg8) -> Opcode {
         action: Box::new(move |env: &mut Environment| {
             let a = env.reg8_ext(r);
             let v = operator_dec(env, a);
+            if r == Reg8::_HL {
+                // 1 internal cycle
+		env.sys.use_cycles(1);
+            }
             env.set_reg(r, v);
         })
     }
