@@ -2,6 +2,8 @@ use super::decoder_8080::*;
 use super::decoder_ez80::*;
 use super::decoder_z80::*;
 use super::environment::*;
+use super::fast_bus::FastBus;
+use super::fast_core::step_ez80_fast;
 use super::machine::*;
 use super::opcode::*;
 use super::registers::*;
@@ -16,6 +18,15 @@ pub struct Cpu {
     pub state: State,
     trace: bool,
     decoder: Box<dyn Decoder>,
+    cycles: u64,
+    fast_mode: FastMode,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+enum FastMode {
+    Z80,
+    EZ80,
+    I8080,
 }
 
 pub(crate) trait Decoder {
@@ -34,6 +45,8 @@ impl Cpu {
             state: State::new(),
             trace: false,
             decoder: Box::new(DecoderZ80::new()),
+            cycles: 0,
+            fast_mode: FastMode::Z80,
         }
     }
 
@@ -42,6 +55,8 @@ impl Cpu {
             state: State::new(),
             trace: false,
             decoder: Box::new(DecoderEZ80::new()),
+            cycles: 0,
+            fast_mode: FastMode::EZ80,
         }
     }
 
@@ -51,6 +66,8 @@ impl Cpu {
             state: State::new(),
             trace: false,
             decoder: Box::new(Decoder8080::new()),
+            cycles: 0,
+            fast_mode: FastMode::I8080,
         };
 
         cpu.state.reg.set_8080();
@@ -65,6 +82,53 @@ impl Default for Cpu {
 }
 
 impl Cpu {
+    /// Returns a clone of CPU-visible execution state.
+    pub fn save_state(&self) -> State {
+        self.state.clone()
+    }
+
+    /// Restores CPU-visible execution state.
+    pub fn load_state(&mut self, state: &State) {
+        self.state = state.clone();
+    }
+
+    /// Returns the fast-path CPU cycle counter.
+    pub fn cycles(&self) -> u64 {
+        self.cycles
+    }
+
+    /// Sets the fast-path CPU cycle counter.
+    pub fn set_cycles(&mut self, cycles: u64) {
+        self.cycles = cycles;
+    }
+
+    /// Executes one instruction through the generic static-dispatch eZ80 fast path.
+    pub fn step_fast<B: FastBus>(&mut self, bus: &mut B) {
+        match self.fast_mode {
+            FastMode::EZ80 => step_ez80_fast(&mut self.state, &mut self.cycles, bus),
+            FastMode::Z80 | FastMode::I8080 => {
+                panic!("step_fast currently supports Cpu::new_ez80()")
+            }
+        }
+    }
+
+    /// Runs until at least `cycles` additional fast-path CPU cycles have elapsed.
+    pub fn run_cycles<B: FastBus>(&mut self, bus: &mut B, cycles: u64) {
+        let target = self.cycles.wrapping_add(cycles);
+        self.run_until(bus, target);
+    }
+
+    /// Runs until the fast-path CPU cycle counter reaches `target_cycle`.
+    pub fn run_until<B: FastBus>(&mut self, bus: &mut B, target_cycle: u64) {
+        while self.cycles < target_cycle && !self.is_halted() {
+            let before = self.cycles;
+            self.step_fast(bus);
+            if self.cycles == before {
+                break;
+            }
+        }
+    }
+
     // Executes a single instruction
     //
     // Alternative to execute_instruction(), used by Fab Agon Emulator for
@@ -78,13 +142,13 @@ impl Cpu {
 
         let mut env = Environment::new(&mut self.state, sys);
         let opcode = self.decoder.decode(&mut env);
+        env.state.reg.begin_instruction_flags();
         opcode.execute(&mut env);
+        env.state.reg.finish_instruction_flags();
         env.clear_index();
         env.state.clear_sz_prefix();
         env.state.instructions_executed += 1;
-        env.state
-            .reg
-            .set8(Reg8::R, env.state.reg.get8(Reg8::R).wrapping_add(1));
+        increment_refresh_register(env.state);
     }
 
     /// Executes a single instruction
@@ -127,13 +191,13 @@ impl Cpu {
         if self.trace {
             print!("==> {:06x}: {:20}", pc, opcode.disasm(&env).0);
         }
+        env.state.reg.begin_instruction_flags();
         opcode.execute(&mut env);
+        env.state.reg.finish_instruction_flags();
         env.clear_index();
         env.state.clear_sz_prefix();
         env.state.instructions_executed += 1;
-        env.state
-            .reg
-            .set8(Reg8::R, env.state.reg.get8(Reg8::R).wrapping_add(1));
+        increment_refresh_register(env.state);
 
         if self.trace {
             print!(" PC:{:06x} AF:{:04x} BC:{:06x} DE:{:06x} HL:{:06x} SPS:{:04x} SPL:{:06x} IX:{:06x} IY:{:06x} MB {:02x} ADL {:01x} MADL {:01x} tick {}",
@@ -211,4 +275,11 @@ impl Cpu {
     pub fn signal_reset(&mut self) {
         self.state.reset_pending = true
     }
+}
+
+fn increment_refresh_register(state: &mut State) {
+    let r = state.reg.get8(Reg8::R);
+    state
+        .reg
+        .set8(Reg8::R, (r & 0x80) | r.wrapping_add(1) & 0x7f);
 }

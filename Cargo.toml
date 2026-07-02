@@ -11,3 +11,7 @@ repository = "https://github.com/tomm/ez80"
 readme = "README.md"
 
 [dependencies]
+
+[[bench]]
+name = "cpu_fast_path"
+harness = false

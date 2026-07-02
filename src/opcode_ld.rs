@@ -54,7 +54,12 @@ pub fn build_ld_a_r_or_i(src: Reg8) -> Opcode {
     Opcode {
         name: format!("LD A, {}", src),
         action: Box::new(move |env: &mut Environment| {
-            let value = env.state.reg.get8(src);
+            let value = if src == Reg8::R {
+                let r = env.state.reg.get8(Reg8::R);
+                (r & 0x80) | (r.wrapping_add(1) & 0x7f)
+            } else {
+                env.state.reg.get8(src)
+            };
             env.state.reg.set8(Reg8::A, value);
 
             // special case. does set some flags
@@ -63,6 +68,7 @@ pub fn build_ld_a_r_or_i(src: Reg8) -> Opcode {
             env.state.reg.put_flag(Flag::Z, value == 0);
             env.state.reg.put_flag(Flag::S, (value as i8) < 0);
             env.state.reg.put_flag(Flag::P, env.state.reg.iff2);
+            env.state.reg.update_undocumented_flags(value);
         }),
     }
 }

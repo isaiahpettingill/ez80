@@ -10,6 +10,7 @@ pub fn build_add_hl_rr(rr: Reg16) -> Opcode {
         action: Box::new(move |env: &mut Environment| {
             let aa = env.index_value();
             let bb = env.reg16or24_ext(rr);
+            env.state.reg.set_memptr((aa as u16).wrapping_add(1));
 
             if env.state.is_op_long() {
                 let vv = operator_add24(env, aa, bb);
@@ -28,6 +29,7 @@ pub fn build_adc_hl_rr(rr: Reg16) -> Opcode {
         action: Box::new(move |env: &mut Environment| {
             let aa = env.index_value(); // This will always be HL.
             let bb = env.reg16or24_ext(rr);
+            env.state.reg.set_memptr((aa as u16).wrapping_add(1));
 
             if env.state.is_op_long() {
                 let vv = operator_adc24(env, aa, bb);
@@ -46,6 +48,7 @@ pub fn build_sbc_hl_rr(rr: Reg16) -> Opcode {
         action: Box::new(move |env: &mut Environment| {
             let aa = env.index_value(); // This will always be HL.
             let bb = env.reg16or24_ext(rr);
+            env.state.reg.set_memptr((aa as u16).wrapping_add(1));
             if env.state.is_op_long() {
                 let vv = operator_sbc24(env, aa, bb);
                 env.state.reg.set24(Reg16::HL, vv);

@@ -133,6 +133,9 @@ pub struct Registers {
     pub madl: bool, // ez80
     pub mbase: u8,  // provides the top 8-bits of a 24-bit address when ez80 is in z80 mode
     i_high: u8,
+    pub(crate) memptr: u16,
+    flag_q: bool,
+    flag_q_pending: bool,
 }
 
 impl Registers {
@@ -150,6 +153,9 @@ impl Registers {
             madl: false,
             mbase: 0,
             i_high: 0,
+            memptr: 0,
+            flag_q: false,
+            flag_q_pending: false,
         };
 
         reg.set16(Reg16::AF, 0xffff);
@@ -162,6 +168,22 @@ impl Registers {
         self.set16(Reg16::AF, 0xffff);
         self.set16(Reg16::SP, 0xffff);
         self.set_flag(Flag::N);
+    }
+
+    pub(crate) fn begin_instruction_flags(&mut self) {
+        self.flag_q_pending = false;
+    }
+
+    pub(crate) fn finish_instruction_flags(&mut self) {
+        self.flag_q = self.flag_q_pending;
+    }
+
+    pub(crate) fn flag_q(&self) -> bool {
+        self.flag_q
+    }
+
+    pub(crate) fn set_memptr(&mut self, value: u16) {
+        self.memptr = value;
     }
 
     /// Returns the value of the A register
@@ -354,12 +376,14 @@ impl Registers {
     /// Sets a flag. Sets the value to true
     #[inline]
     pub fn set_flag(&mut self, flag: Flag) {
+        self.flag_q_pending = true;
         self.data[Reg8::F as usize] |= flag as u8;
     }
 
     /// Clears a flag. Sets the value to false
     #[inline]
     pub fn clear_flag(&mut self, flag: Flag) {
+        self.flag_q_pending = true;
         self.data[Reg8::F as usize] &= !(flag as u8);
     }
 

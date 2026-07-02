@@ -272,23 +272,22 @@ pub fn build_in_block((inc, repeat, postfix): (bool, bool, &'static str)) -> Opc
     Opcode {
         name: format!("IN{}", postfix),
         action: Box::new(move |env: &mut Environment| {
-            // The INI/INIR/IND/INDR instructions use BC after decrementing B
             let b = env.state.reg.inc_dec8(Reg8::B, false /* decrement */);
             let address = env.state.reg.get16(Reg16::BC);
-
             let value = env.port_in(address);
-            // We won't have IX and IY cases to consider
             env.set_reg(Reg8::_HL, value);
-            if env.state.is_op_long() {
-                env.state.reg.inc_dec24(Reg16::HL, inc);
-            } else {
-                env.state.reg.inc_dec16(Reg16::HL, inc);
-            }
+            inc_dec16or24(env, Reg16::HL, inc);
+            env.state
+                .reg
+                .set_memptr(address.wrapping_add(if inc { 1 } else { 0xffff }));
 
-            // TUZD-4.3
-            let mut j = env.state.reg.get8(Reg8::C) as u16;
-            j = if inc { j + 1 } else { j - 1 };
-            let k = value as u16 + (j & 0xff);
+            let c = env.state.reg.get8(Reg8::C);
+            let low = if inc {
+                c.wrapping_add(1)
+            } else {
+                c.wrapping_sub(1)
+            };
+            let k = value as u16 + low as u16;
             env.state.reg.update_block_flags(value, k, b);
 
             if repeat && b != 0 {

@@ -305,7 +305,7 @@ impl DecoderZ80 {
             let p = DecodingHelper::parts(c);
             let opcode = match p.x {
                 0 => Some(build_rot_r(R[p.z], ROT[p.y], false, true)), // Shifts
-                1 => Some(build_bit_r(p.y as u8, R[p.z])),             // BIT
+                1 => Some(build_bit_r(p.y as u8, Reg8::_HL)),          // BIT
                 2 => Some(build_indexed_set_res_r(p.y as u8, R[p.z], false)), // RES
                 3 => Some(build_indexed_set_res_r(p.y as u8, R[p.z], true)), // SET
                 _ => panic!("Unreachable"),

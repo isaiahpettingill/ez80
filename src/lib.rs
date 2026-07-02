@@ -38,6 +38,9 @@
 //! ```
 
 mod cpu;
+mod fast_bus;
+mod fast_core;
+mod fast_env;
 mod machine;
 mod registers;
 mod state;
@@ -60,6 +63,8 @@ pub mod z80_mem_tools;
 
 pub use cpu::Cpu;
 pub use environment::Environment;
+pub use fast_bus::FastBus;
 pub use machine::Machine;
 pub use machine::PlainMachine;
 pub use registers::*;
+pub use state::State;

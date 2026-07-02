@@ -75,7 +75,11 @@ pub fn build_rot_r(
             if indexed && r != Reg8::_HL {
                 env.set_reg(Reg8::_HL, v);
             }
-            env.set_reg(r, v);
+            if indexed && r != Reg8::_HL {
+                env.state.reg.set8(r, v);
+            } else {
+                env.set_reg(r, v);
+            }
 
             if r == Reg8::_HL {
                 // 1 internal cycle
@@ -116,17 +120,19 @@ pub fn build_bit_r(n: u8, r: Reg8) -> Opcode {
                 different, namely bit 5 and 3 of the high byte of IX+d (so IX
                 plus the displacement).
                 */
-                let address = env.index_address();
-                env.state
-                    .reg
-                    .update_undocumented_flags((address >> 8) as u8);
+                let flag_source = if env.is_alt_index() {
+                    (env.index_address() >> 8) as u8
+                } else {
+                    (env.state.reg.memptr >> 8) as u8
+                };
+                env.state.reg.update_undocumented_flags(flag_source);
 
                 // Exceptions for (HL) TUZD-4-1
                 /* Things get more bizarre with the BIT n,(HL)
                 instruction. Again, except for YF and XF the flags
                 are the same. YF and XF are copied from some sort
                 of internal register */
-                // Not implemented. Just done the same than for (IX+d)
+                // MEMPTR carries the internal register source for plain (HL).
             } else {
                 env.state.reg.update_undocumented_flags(v); // TUZD-4.1, copy bits from reg
             }
@@ -175,7 +181,7 @@ pub fn build_indexed_set_res_r(bit: u8, r: Reg8, value: bool) -> Opcode {
             }
             env.set_reg(Reg8::_HL, v);
             if r != Reg8::_HL {
-                env.set_reg(r, v);
+                env.state.reg.set8(r, v);
             }
         }),
     }
@@ -200,10 +206,12 @@ pub fn build_scf() -> Opcode {
         name: "SCF".to_string(),
         action: Box::new(move |env: &mut Environment| {
             let a = env.state.reg.a();
+            let old_f = env.state.reg.get8(Reg8::F);
+            let flag_source = if env.state.reg.flag_q() { a } else { a | old_f };
 
             env.state.reg.set_flag(Flag::C);
             env.state.reg.update_hn_flags(false, false);
-            env.state.reg.update_undocumented_flags(a);
+            env.state.reg.update_undocumented_flags(flag_source);
         }),
     }
 }
@@ -213,11 +221,13 @@ pub fn build_ccf() -> Opcode {
         name: "CCF".to_string(),
         action: Box::new(move |env: &mut Environment| {
             let a = env.state.reg.a();
+            let old_f = env.state.reg.get8(Reg8::F);
+            let flag_source = if env.state.reg.flag_q() { a } else { a | old_f };
             let c = env.state.reg.get_flag(Flag::C);
 
             env.state.reg.put_flag(Flag::C, !c);
             env.state.reg.update_hn_flags(c, false);
-            env.state.reg.update_undocumented_flags(a);
+            env.state.reg.update_undocumented_flags(flag_source);
         }),
     }
 }
