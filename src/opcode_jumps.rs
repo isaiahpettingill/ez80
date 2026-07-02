@@ -51,12 +51,13 @@ fn relative_jump(env: &mut Environment, offset: u8) {
     env.state.set_pc(pc);
 }
 
-fn handle_jump_adl_state(env: &mut Environment) {
+fn handle_jump_adl_state(env: &mut Environment) -> bool {
     if env.state.reg.adl {
         match env.state.sz_prefix {
             SizePrefix::SIS => { env.state.reg.adl = false },
             SizePrefix::LIS | SizePrefix::SIL => {
-                eprintln!("Invalid size prefix for ADL=1 with jump at PC=${:x}", env.state.pc());
+                env.trap_illegal_instruction();
+                return false;
             }
             SizePrefix::LIL |
             SizePrefix::None => {}
@@ -65,11 +66,13 @@ fn handle_jump_adl_state(env: &mut Environment) {
         match env.state.sz_prefix {
             SizePrefix::LIL => { env.state.reg.adl = true },
             SizePrefix::LIS | SizePrefix::SIL => {
-                eprintln!("Invalid size prefix for ADL=0 with jump at PC=${:x}", env.state.pc());
+                env.trap_illegal_instruction();
+                return false;
             },
             SizePrefix::SIS | SizePrefix::None => {}
         }
     }
+    true
 }
 
 // Absolute jumps
@@ -78,9 +81,10 @@ pub fn build_jp_unconditional() -> Opcode {
         name: "JP nn".to_string(),
         action: Box::new(move |env: &mut Environment| {
             let address = env.advance_immediate_16mbase_or_24();
-            handle_jump_adl_state(env);
             env.sys.use_cycles(1);
-            env.state.set_pc(address);
+            if handle_jump_adl_state(env) {
+                env.state.set_pc(address);
+            }
         })
     }
 }
@@ -104,9 +108,10 @@ pub fn build_jp_hl() -> Opcode {
         action: Box::new(move |env: &mut Environment| {
             // Note: no displacement added to the index
             let address = env.index_value();
-            handle_jump_adl_state(env);
             env.sys.use_cycles(1);
-            env.state.set_pc(address);
+            if handle_jump_adl_state(env) {
+                env.state.set_pc(address);
+            }
         })
     }
 }

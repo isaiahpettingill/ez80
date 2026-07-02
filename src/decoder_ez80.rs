@@ -436,7 +436,10 @@ impl DecoderEZ80 {
     fn load_prefix_ed(&mut self) {
         for c in 0..=255 {
             let p = DecodingHelper::parts(c);
-            let opcode = match p.x {
+            let opcode = if c == 0xfe {
+                Some(build_illegal_instruction())
+            } else {
+                match p.x {
                 0 => match p.z {
                     0 => match p.y {
                         0 | 1 | 2 | 3 | 4 | 5 | 7 => Some(build_in0_r_n(R[p.y])),
@@ -575,7 +578,8 @@ impl DecoderEZ80 {
                     },
                     _ => Some(build_noni_nop()), // Invalid instruction NONI + NOP
                 },
-                _ => panic!("Unreachable")
+                    _ => panic!("Unreachable")
+                }
             };
 
 /*

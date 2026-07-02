@@ -31,6 +31,8 @@ pub struct State {
     pub sz_prefix: SizePrefix,
     pub instructions_executed: u64,
     pub cached_instruction: bool,
+    pub illegal_instruction: bool,
+    pub illegal_instruction_adl: bool,
 }
 
 impl State {
@@ -46,6 +48,8 @@ impl State {
             sz_prefix: SizePrefix::None,
             instructions_executed: 0,
             cached_instruction: false,
+            illegal_instruction: false,
+            illegal_instruction_adl: false,
         }
     }
 

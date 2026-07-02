@@ -100,6 +100,15 @@ pub fn build_noni_nop() -> Opcode {
     }
 }
 
+pub fn build_illegal_instruction() -> Opcode {
+    Opcode {
+        name: "ILLEGAL".to_string(),
+        action: Box::new(|env: &mut Environment| {
+            env.trap_illegal_instruction();
+        })
+    }
+}
+
 pub fn build_halt() -> Opcode {
     Opcode {
         name: "HALT".to_string(),

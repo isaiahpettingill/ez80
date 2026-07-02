@@ -65,6 +65,12 @@ impl <'a> Environment<'_> {
         }
     }
 
+    pub fn trap_illegal_instruction(&mut self) {
+        self.state.illegal_instruction = true;
+        self.state.illegal_instruction_adl = self.state.reg.adl;
+        self.state.halted = true;
+    }
+
     pub fn peek(&self, address: u32) -> u8 {
         self.sys.peek(address)
     }

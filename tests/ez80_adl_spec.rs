@@ -1449,18 +1449,34 @@ fn t85_jp_sis_adl_to_z80() {
 // 86: JP.LIS immediate is illegal
 // ============================================================
 #[test]
-#[ignore]
 fn t86_jp_lis_immediate_illegal() {
-    // Current emulator prints error but doesn't trap
+    let (mut c, mut m) = setup();
+    c.state.reg.mbase = 0x12;
+    m.w8(0x120000, 0x49); // .LIS
+    m.w8(0x120001, 0xc3); // JP nn
+    m.w16(0x120002, 0x3456);
+    exec(&mut c, &mut m);
+    assert!(c.state.illegal_instruction);
+    assert!(!c.state.illegal_instruction_adl);
+    assert!(!adl(&c));
+    assert_ne!(pc(&c), 0x123456);
 }
 
 // ============================================================
 // 87: JP.SIL immediate is illegal
 // ============================================================
 #[test]
-#[ignore]
 fn t87_jp_sil_immediate_illegal() {
-    // Current emulator prints error but doesn't trap
+    let (mut c, mut m) = setup();
+    c.state.reg.adl = true;
+    m.w8(0x000000, 0x52); // .SIL
+    m.w8(0x000001, 0xc3); // JP nn
+    m.w24(0x000002, 0x123456);
+    exec(&mut c, &mut m);
+    assert!(c.state.illegal_instruction);
+    assert!(c.state.illegal_instruction_adl);
+    assert!(adl(&c));
+    assert_ne!(pc(&c), 0x123456);
 }
 
 // ============================================================
@@ -1691,7 +1707,14 @@ fn t99_reti_l_restores_z80() {
 // 100: Illegal instruction trap records mode
 // ============================================================
 #[test]
-#[ignore]
 fn t100_illegal_instruction_trap() {
-    // Uses 0xed 0xfe which is an undefined opcode (panics in current emulator)
+    let (mut c, mut m) = setup();
+    c.state.reg.adl = true;
+    c.state.set_pc(0x123456);
+    m.w8(0x123456, 0xed);
+    m.w8(0x123457, 0xfe);
+    exec(&mut c, &mut m);
+    assert!(c.state.illegal_instruction);
+    assert!(c.state.illegal_instruction_adl);
+    assert!(c.state.halted);
 }
