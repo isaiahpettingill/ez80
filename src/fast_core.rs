@@ -1500,6 +1500,7 @@ fn op_inirx_or_indrx<B: FastBus>(env: &mut FastEnv<B>, inc: bool) {
 }
 
 fn op_in_block<B: FastBus>(env: &mut FastEnv<B>, (inc, repeat): (bool, bool)) {
+    let original_bc = env.state.reg.get16(Reg16::BC);
     let b = env.state.reg.inc_dec8(Reg8::B, false);
     let address = env.state.reg.get16(Reg16::BC);
     let value = env.input8(address);
@@ -1507,7 +1508,7 @@ fn op_in_block<B: FastBus>(env: &mut FastEnv<B>, (inc, repeat): (bool, bool)) {
     inc_dec16or24(env, Reg16::HL, inc);
     env.state
         .reg
-        .set_memptr(address.wrapping_add(if inc { 1 } else { 0xffff }));
+        .set_memptr(original_bc.wrapping_add(if inc { 1 } else { 0xffff }));
     let c = env.state.reg.get8(Reg8::C);
     let low = if inc {
         c.wrapping_add(1)

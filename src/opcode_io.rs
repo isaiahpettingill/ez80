@@ -272,6 +272,7 @@ pub fn build_in_block((inc, repeat, postfix): (bool, bool, &'static str)) -> Opc
     Opcode {
         name: format!("IN{}", postfix),
         action: Box::new(move |env: &mut Environment| {
+            let original_bc = env.state.reg.get16(Reg16::BC);
             let b = env.state.reg.inc_dec8(Reg8::B, false /* decrement */);
             let address = env.state.reg.get16(Reg16::BC);
             let value = env.port_in(address);
@@ -279,7 +280,7 @@ pub fn build_in_block((inc, repeat, postfix): (bool, bool, &'static str)) -> Opc
             inc_dec16or24(env, Reg16::HL, inc);
             env.state
                 .reg
-                .set_memptr(address.wrapping_add(if inc { 1 } else { 0xffff }));
+                .set_memptr(original_bc.wrapping_add(if inc { 1 } else { 0xffff }));
 
             let c = env.state.reg.get8(Reg8::C);
             let low = if inc {

@@ -1,9 +1,55 @@
 use ez80::*;
+use std::cell::Cell;
 
 // Test binaries from https://github.com/raxoft/z80test.
 // These are exhaustive and slow, so they are ignored by default.
 
 const START: u16 = 0x8000;
+
+struct RaxoftMachine {
+    mem: [u8; 4 * 65536],
+    input: [u8; 65536],
+    output: [u8; 65536],
+    elapsed_cycles: Cell<i64>,
+}
+
+impl RaxoftMachine {
+    fn new() -> Self {
+        Self {
+            mem: [0; 4 * 65536],
+            input: [0xbf; 65536],
+            output: [0; 65536],
+            elapsed_cycles: Cell::new(0),
+        }
+    }
+}
+
+impl Machine for RaxoftMachine {
+    fn peek(&self, address: u32) -> u8 {
+        self.use_cycles(1);
+        self.mem[address as usize]
+    }
+
+    fn poke(&mut self, address: u32, value: u8) {
+        self.use_cycles(1);
+        self.mem[address as usize] = value;
+    }
+
+    fn use_cycles(&self, cycles: i32) {
+        self.elapsed_cycles
+            .set(self.elapsed_cycles.get().wrapping_add(cycles as i64));
+    }
+
+    fn port_in(&mut self, address: u16) -> u8 {
+        self.use_cycles(1);
+        self.input[address as usize]
+    }
+
+    fn port_out(&mut self, address: u16, value: u8) {
+        self.use_cycles(1);
+        self.output[address as usize] = value;
+    }
+}
 
 struct Z80TestCase {
     name: &'static str,
@@ -21,7 +67,7 @@ static Z80MEMPTR: &[u8] = include_bytes!("res/z80memptr.out");
 
 fn run_z80test(case: Z80TestCase) {
     let mut cpu = Cpu::new_z80();
-    let mut machine = PlainMachine::new();
+    let mut machine = RaxoftMachine::new();
 
     for (i, byte) in case.code.iter().enumerate() {
         machine.poke(START as u32 + i as u32, *byte);
@@ -29,9 +75,6 @@ fn run_z80test(case: Z80TestCase) {
 
     machine.poke(0x1601, 0xc9); // RET
     machine.poke(0x0010, 0xc9); // RET
-    for high in 0..=0xff {
-        machine.port_out((high << 8) | 0x00fe, 0xbf);
-    }
 
     cpu.state.set_pc(START as u32);
     let mut msg = String::new();
@@ -72,6 +115,9 @@ fn parse_result(msg: &str) -> (usize, usize) {
         .lines()
         .find(|line| line.contains("Result:"))
         .expect("z80test output did not contain a Result line");
+    if result.contains("all tests passed") {
+        return (0, 0);
+    }
     let mut numbers = result
         .split(|ch: char| !ch.is_ascii_digit())
         .filter(|part| !part.is_empty())
@@ -120,8 +166,8 @@ fn z80full() {
     run_z80test(Z80TestCase {
         name: "z80full",
         code: Z80FULL,
-        expected_failures: 15,
-        expected_total: 152,
+        expected_failures: 0,
+        expected_total: 0,
     });
 }
 
