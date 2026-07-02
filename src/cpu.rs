@@ -114,7 +114,13 @@ impl Cpu {
             env.state.nmi_pending = false;
             env.state.halted = false;
             env.state.reg.start_nmi();
+            let was_z80 = !env.state.reg.adl;
+            let had_madl = env.state.reg.madl;
             env.subroutine_call(NMI_ADDRESS);
+            if had_madl && was_z80 {
+                env.push_byte_spl(0x01);
+                env.state.reg.adl = true;
+            }
         }
 
         let pc = env.state.pc();
