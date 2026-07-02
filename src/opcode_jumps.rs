@@ -1,5 +1,5 @@
-use super::opcode::*;
 use super::environment::*;
+use super::opcode::*;
 use super::registers::*;
 use super::state::SizePrefix;
 
@@ -16,7 +16,7 @@ pub fn build_djnz() -> Opcode {
                 env.sys.use_cycles(2);
                 relative_jump(env, offset);
             }
-        })
+        }),
     }
 }
 
@@ -27,7 +27,7 @@ pub fn build_jr_unconditional() -> Opcode {
             let offset = env.advance_pc();
             env.sys.use_cycles(1);
             relative_jump(env, offset);
-        })
+        }),
     }
 }
 
@@ -40,10 +40,9 @@ pub fn build_jr_eq((flag, value, name): (Flag, bool, &str)) -> Opcode {
                 env.sys.use_cycles(2);
                 relative_jump(env, offset);
             }
-        })
+        }),
     }
 }
-
 
 fn relative_jump(env: &mut Environment, offset: u8) {
     let mut pc = env.state.pc();
@@ -54,21 +53,20 @@ fn relative_jump(env: &mut Environment, offset: u8) {
 fn handle_jump_adl_state(env: &mut Environment) -> bool {
     if env.state.reg.adl {
         match env.state.sz_prefix {
-            SizePrefix::SIS => { env.state.reg.adl = false },
+            SizePrefix::SIS => env.state.reg.adl = false,
             SizePrefix::LIS | SizePrefix::SIL => {
                 env.trap_illegal_instruction();
                 return false;
             }
-            SizePrefix::LIL |
-            SizePrefix::None => {}
+            SizePrefix::LIL | SizePrefix::None => {}
         }
     } else {
         match env.state.sz_prefix {
-            SizePrefix::LIL => { env.state.reg.adl = true },
+            SizePrefix::LIL => env.state.reg.adl = true,
             SizePrefix::LIS | SizePrefix::SIL => {
                 env.trap_illegal_instruction();
                 return false;
-            },
+            }
             SizePrefix::SIS | SizePrefix::None => {}
         }
     }
@@ -85,7 +83,7 @@ pub fn build_jp_unconditional() -> Opcode {
             if handle_jump_adl_state(env) {
                 env.state.set_pc(address);
             }
-        })
+        }),
     }
 }
 
@@ -98,7 +96,7 @@ pub fn build_jp_eq((flag, value, name): (Flag, bool, &str)) -> Opcode {
                 env.sys.use_cycles(1);
                 env.state.set_pc(address);
             }
-        })
+        }),
     }
 }
 
@@ -112,7 +110,7 @@ pub fn build_jp_hl() -> Opcode {
             if handle_jump_adl_state(env) {
                 env.state.set_pc(address);
             }
-        })
+        }),
     }
 }
 
@@ -176,7 +174,7 @@ pub fn build_call() -> Opcode {
             let address = env.advance_immediate16or24();
             handle_call_size_prefix(env);
             env.state.set_pc(address);
-        })
+        }),
     }
 }
 
@@ -189,7 +187,7 @@ pub fn build_call_eq((flag, value, name): (Flag, bool, &str)) -> Opcode {
                 handle_call_size_prefix(env);
                 env.state.set_pc(address);
             }
-        })
+        }),
     }
 }
 
@@ -247,7 +245,7 @@ pub fn build_rst(d: u8) -> Opcode {
         action: Box::new(move |env: &mut Environment| {
             let address = d as u32;
             handle_rst_size_prefix(env, address);
-        })
+        }),
     }
 }
 
@@ -259,7 +257,7 @@ pub fn build_ret() -> Opcode {
         action: Box::new(move |env: &mut Environment| {
             env.sys.use_cycles(2);
             env.subroutine_return();
-        })
+        }),
     }
 }
 
@@ -269,7 +267,7 @@ pub fn build_reti() -> Opcode {
         action: Box::new(move |env: &mut Environment| {
             env.sys.use_cycles(2);
             env.subroutine_return();
-        })
+        }),
     }
 }
 
@@ -280,7 +278,7 @@ pub fn build_retn() -> Opcode {
             env.sys.use_cycles(2);
             env.subroutine_return();
             env.state.reg.end_nmi();
-        })
+        }),
     }
 }
 
@@ -294,6 +292,6 @@ pub fn build_ret_eq((flag, value, name): (Flag, bool, &str)) -> Opcode {
             } else {
                 env.sys.use_cycles(1);
             }
-        })
+        }),
     }
 }

@@ -1,6 +1,6 @@
+use super::decoder_8080::*;
 use super::decoder_ez80::*;
 use super::decoder_z80::*;
-use super::decoder_8080::*;
 use super::environment::*;
 use super::machine::*;
 use super::opcode::*;
@@ -10,7 +10,7 @@ use super::state::*;
 const NMI_ADDRESS: u32 = 0x0066;
 
 /// The Z80 cpu emulator.
-/// 
+///
 /// Executes Z80 instructions changing the cpu State and Machine
 pub struct Cpu {
     pub state: State,
@@ -23,7 +23,6 @@ pub(crate) trait Decoder {
 }
 
 impl Cpu {
-
     /// Returns a Z80 Cpu instance. Alias of new_z80()
     pub fn new() -> Cpu {
         Self::new_z80()
@@ -34,7 +33,7 @@ impl Cpu {
         Cpu {
             state: State::new(),
             trace: false,
-            decoder: Box::new(DecoderZ80::new())
+            decoder: Box::new(DecoderZ80::new()),
         }
     }
 
@@ -42,7 +41,7 @@ impl Cpu {
         Cpu {
             state: State::new(),
             trace: false,
-            decoder: Box::new(DecoderEZ80::new())
+            decoder: Box::new(DecoderEZ80::new()),
         }
     }
 
@@ -51,13 +50,12 @@ impl Cpu {
         let mut cpu = Cpu {
             state: State::new(),
             trace: false,
-            decoder: Box::new(Decoder8080::new())
+            decoder: Box::new(Decoder8080::new()),
         };
 
         cpu.state.reg.set_8080();
         cpu
     }
-
 }
 
 impl Default for Cpu {
@@ -75,7 +73,7 @@ impl Cpu {
     pub fn fast_execute_instruction(&mut self, sys: &mut dyn Machine) {
         if self.is_halted() {
             // The CPU is in HALT state. Only interrupts can execute.
-            return
+            return;
         }
 
         let mut env = Environment::new(&mut self.state, sys);
@@ -84,7 +82,9 @@ impl Cpu {
         env.clear_index();
         env.state.clear_sz_prefix();
         env.state.instructions_executed += 1;
-        env.state.reg.set8(Reg8::R, env.state.reg.get8(Reg8::R).wrapping_add(1));
+        env.state
+            .reg
+            .set8(Reg8::R, env.state.reg.get8(Reg8::R).wrapping_add(1));
     }
 
     /// Executes a single instruction
@@ -96,7 +96,7 @@ impl Cpu {
     pub fn execute_instruction(&mut self, sys: &mut dyn Machine) {
         if self.is_halted() {
             // The CPU is in HALT state. Only interrupts can execute.
-            return
+            return;
         }
 
         let mut env = Environment::new(&mut self.state, sys);
@@ -109,8 +109,7 @@ impl Cpu {
             env.state.reg.set8(Reg8::R, 0x00);
             env.state.reg.set_interrupts(false);
             env.state.reg.set_interrupt_mode(0);
-        }
-        else if env.state.nmi_pending {
+        } else if env.state.nmi_pending {
             env.state.nmi_pending = false;
             env.state.halted = false;
             env.state.reg.start_nmi();
@@ -132,7 +131,9 @@ impl Cpu {
         env.clear_index();
         env.state.clear_sz_prefix();
         env.state.instructions_executed += 1;
-        env.state.reg.set8(Reg8::R, env.state.reg.get8(Reg8::R).wrapping_add(1));
+        env.state
+            .reg
+            .set8(Reg8::R, env.state.reg.get8(Reg8::R).wrapping_add(1));
 
         if self.trace {
             print!(" PC:{:06x} AF:{:04x} BC:{:06x} DE:{:06x} HL:{:06x} SPS:{:04x} SPL:{:06x} IX:{:06x} IY:{:06x} MB {:02x} ADL {:01x} MADL {:01x} tick {}",
@@ -150,32 +151,37 @@ impl Cpu {
                 self.state.reg.madl as i32,
                 self.state.instructions_executed,
             );
-            println!(" [{:02x} {:02x} {:02x} {:02x}]", sys.peek(pc),
+            println!(
+                " [{:02x} {:02x} {:02x} {:02x}]",
+                sys.peek(pc),
                 sys.peek(pc.wrapping_add(1)),
                 sys.peek(pc.wrapping_add(2)),
-                sys.peek(pc.wrapping_add(3)));
+                sys.peek(pc.wrapping_add(3))
+            );
         }
     }
 
     /// Returns the instrction in PC disassembled. PC is advanced.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `sys` - A representation of the emulated machine that has the Machine trait
     ///  
     pub fn disasm_instruction(&mut self, sys: &mut dyn Machine) -> String {
         let mut env = Environment::new(&mut self.state, sys);
         let opcode = self.decoder.decode(&mut env);
         let (asm, pc_inc) = opcode.disasm(&env);
-        for _ in 0..pc_inc { env.advance_pc(); }
+        for _ in 0..pc_inc {
+            env.advance_pc();
+        }
         asm
     }
 
     /// Activates or deactivates traces of the instruction executed and
     /// the state of the registers.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `trace` - A bool defining the trace state to set
     pub fn set_trace(&mut self, trace: bool) {
         self.trace = trace;
@@ -206,5 +212,3 @@ impl Cpu {
         self.state.reset_pending = true
     }
 }
-
-

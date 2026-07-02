@@ -22,7 +22,7 @@ pub fn get_cstring<M: Machine>(machine: &M, address: u32) -> Vec<u8> {
     loop {
         match machine.peek(ptr) {
             0 => break,
-            b => s.push(b)
+            b => s.push(b),
         }
         ptr += 1;
     }
@@ -31,7 +31,7 @@ pub fn get_cstring<M: Machine>(machine: &M, address: u32) -> Vec<u8> {
 
 pub fn checksum<M: Machine>(machine: &M, start: u32, len: u32) -> u32 {
     let mut checksum = 0u32;
-    for i in (start..(start+len)).step_by(3) {
+    for i in (start..(start + len)).step_by(3) {
         checksum ^= machine._peek24(i as u32);
     }
     checksum

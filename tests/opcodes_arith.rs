@@ -5,7 +5,7 @@ fn test_neg_a() {
     let mut sys = PlainMachine::new();
     let mut cpu = Cpu::new();
 
-    sys.poke(0x0000, 0xed);  // NEG
+    sys.poke(0x0000, 0xed); // NEG
     sys.poke(0x0001, 0x44);
     cpu.registers().set_a(0xff);
 
@@ -19,7 +19,7 @@ fn test_inc_a() {
     let mut sys = PlainMachine::new();
     let mut cpu = Cpu::new();
 
-    sys.poke(0x0000, 0x3c);  // INC A
+    sys.poke(0x0000, 0x3c); // INC A
     cpu.registers().set_a(0xa4);
 
     cpu.execute_instruction(&mut sys);
@@ -32,7 +32,7 @@ fn test_inc_a_overflow() {
     let mut sys = PlainMachine::new();
     let mut cpu = Cpu::new();
 
-    sys.poke(0x0000, 0x3c);  // INC A
+    sys.poke(0x0000, 0x3c); // INC A
     cpu.registers().set_a(0xff);
 
     cpu.execute_instruction(&mut sys);
@@ -45,7 +45,7 @@ fn test_inc_e() {
     let mut sys = PlainMachine::new();
     let mut cpu = Cpu::new();
 
-    sys.poke(0x0000, 0x1c);  // INC E
+    sys.poke(0x0000, 0x1c); // INC E
     cpu.registers().set8(Reg8::E, 0x14);
 
     cpu.execute_instruction(&mut sys);
@@ -58,7 +58,7 @@ fn test_dec_a() {
     let mut sys = PlainMachine::new();
     let mut cpu = Cpu::new();
 
-    sys.poke(0x0000, 0x3d);  // DEC A
+    sys.poke(0x0000, 0x3d); // DEC A
     cpu.registers().set_a(0xa4);
 
     cpu.execute_instruction(&mut sys);
@@ -71,7 +71,7 @@ fn test_dec_a_underflow() {
     let mut sys = PlainMachine::new();
     let mut cpu = Cpu::new();
 
-    sys.poke(0x0000, 0x3d);  // DEC A
+    sys.poke(0x0000, 0x3d); // DEC A
     cpu.registers().set_a(0x00);
 
     cpu.execute_instruction(&mut sys);
@@ -84,7 +84,7 @@ fn test_inc_de() {
     let mut sys = PlainMachine::new();
     let mut cpu = Cpu::new();
 
-    sys.poke(0x0000, 0x13);  // INC DE
+    sys.poke(0x0000, 0x13); // INC DE
     cpu.registers().set16(Reg16::DE, 0xcea4);
 
     cpu.execute_instruction(&mut sys);
@@ -97,7 +97,7 @@ fn test_inc_de_overflow() {
     let mut sys = PlainMachine::new();
     let mut cpu = Cpu::new();
 
-    sys.poke(0x0000, 0x13);  // INC DE
+    sys.poke(0x0000, 0x13); // INC DE
     cpu.registers().set16(Reg16::DE, 0xffff);
 
     cpu.execute_instruction(&mut sys);
@@ -110,7 +110,7 @@ fn test_dec_de() {
     let mut sys = PlainMachine::new();
     let mut cpu = Cpu::new();
 
-    sys.poke(0x0000, 0x1b);  // DEC A
+    sys.poke(0x0000, 0x1b); // DEC A
     cpu.registers().set16(Reg16::DE, 0x1256);
 
     cpu.execute_instruction(&mut sys);
@@ -123,7 +123,7 @@ fn test_dec_de_underflow() {
     let mut sys = PlainMachine::new();
     let mut cpu = Cpu::new();
 
-    sys.poke(0x0000, 0x1b);  // DEC DE
+    sys.poke(0x0000, 0x1b); // DEC DE
     cpu.registers().set16(Reg16::DE, 0x0000);
 
     cpu.execute_instruction(&mut sys);
@@ -136,7 +136,7 @@ fn test_dec_phl() {
     let mut sys = PlainMachine::new();
     let mut cpu = Cpu::new();
 
-    sys.poke(0x0000, 0x35);  // DEC (HL)
+    sys.poke(0x0000, 0x35); // DEC (HL)
     cpu.registers().set16(Reg16::HL, 0x23c4);
     sys.poke(0x23c4, 0x67);
 
@@ -150,7 +150,7 @@ fn test_add_hl_de() {
     let mut sys = PlainMachine::new();
     let mut cpu = Cpu::new();
 
-    sys.poke(0x0000, 0x19);  // ADD HL, DE
+    sys.poke(0x0000, 0x19); // ADD HL, DE
     cpu.registers().set16(Reg16::HL, 0x1234);
     cpu.registers().set16(Reg16::DE, 0x0101);
 

@@ -9,28 +9,46 @@ struct SparseMem {
 
 impl SparseMem {
     fn new() -> Self {
-        SparseMem { data: HashMap::new(), cycles: Cell::new(0) }
+        SparseMem {
+            data: HashMap::new(),
+            cycles: Cell::new(0),
+        }
     }
-    fn w8(&mut self, a: u32, v: u8) { self.data.insert(a & 0xffffff, v); }
-    fn r8(&self, a: u32) -> u8 { self.data.get(&(a & 0xffffff)).copied().unwrap_or(0) }
+    fn w8(&mut self, a: u32, v: u8) {
+        self.data.insert(a & 0xffffff, v);
+    }
+    fn r8(&self, a: u32) -> u8 {
+        self.data.get(&(a & 0xffffff)).copied().unwrap_or(0)
+    }
     fn w24(&mut self, a: u32, v: u32) {
         let a = a & 0xffffff;
         self.data.insert(a, v as u8);
-        self.data.insert(a.wrapping_add(1) & 0xffffff, (v >> 8) as u8);
-        self.data.insert(a.wrapping_add(2) & 0xffffff, (v >> 16) as u8);
+        self.data
+            .insert(a.wrapping_add(1) & 0xffffff, (v >> 8) as u8);
+        self.data
+            .insert(a.wrapping_add(2) & 0xffffff, (v >> 16) as u8);
     }
     fn w16(&mut self, a: u32, v: u16) {
         let a = a & 0xffffff;
         self.data.insert(a, v as u8);
-        self.data.insert(a.wrapping_add(1) & 0xffffff, (v >> 8) as u8);
+        self.data
+            .insert(a.wrapping_add(1) & 0xffffff, (v >> 8) as u8);
     }
 }
 
 impl Machine for SparseMem {
-    fn peek(&self, address: u32) -> u8 { self.r8(address) }
-    fn poke(&mut self, address: u32, value: u8) { self.w8(address, value); }
-    fn use_cycles(&self, _c: i32) { self.cycles.set(self.cycles.get().wrapping_add(_c as u64)); }
-    fn port_in(&mut self, _address: u16) -> u8 { 0 }
+    fn peek(&self, address: u32) -> u8 {
+        self.r8(address)
+    }
+    fn poke(&mut self, address: u32, value: u8) {
+        self.w8(address, value);
+    }
+    fn use_cycles(&self, _c: i32) {
+        self.cycles.set(self.cycles.get().wrapping_add(_c as u64));
+    }
+    fn port_in(&mut self, _address: u16) -> u8 {
+        0
+    }
     fn port_out(&mut self, _address: u16, _value: u8) {}
 }
 
@@ -38,30 +56,70 @@ fn setup() -> (Cpu, SparseMem) {
     (Cpu::new_ez80(), SparseMem::new())
 }
 
-fn adl(c: &Cpu) -> bool { c.state.reg.adl }
-fn madl(c: &Cpu) -> bool { c.state.reg.madl }
-fn mbase(c: &Cpu) -> u8 { c.state.reg.mbase }
-fn pc(c: &Cpu) -> u32 { c.state.pc() }
-fn spl(c: &Cpu) -> u32 { c.state.reg.get24(Reg16::SP) }
-fn sps(c: &Cpu) -> u16 { c.state.reg.get16(Reg16::SP) }
-fn a(c: &Cpu) -> u8 { c.state.reg.a() }
-fn hl(c: &Cpu) -> u32 { c.state.reg.get24(Reg16::HL) }
-fn hl16(c: &Cpu) -> u16 { c.state.reg.get16(Reg16::HL) }
-fn ix(c: &Cpu) -> u32 { c.state.reg.get24(Reg16::IX) }
-fn bc(c: &Cpu) -> u32 { c.state.reg.get24(Reg16::BC) }
-fn de(c: &Cpu) -> u32 { c.state.reg.get24(Reg16::DE) }
-fn f(c: &Cpu) -> u8 { c.state.reg.get8(Reg8::F) }
-fn flag(c: &Cpu, fl: Flag) -> bool { c.state.reg.get_flag(fl) }
+fn adl(c: &Cpu) -> bool {
+    c.state.reg.adl
+}
+fn madl(c: &Cpu) -> bool {
+    c.state.reg.madl
+}
+fn mbase(c: &Cpu) -> u8 {
+    c.state.reg.mbase
+}
+fn pc(c: &Cpu) -> u32 {
+    c.state.pc()
+}
+fn spl(c: &Cpu) -> u32 {
+    c.state.reg.get24(Reg16::SP)
+}
+fn sps(c: &Cpu) -> u16 {
+    c.state.reg.get16(Reg16::SP)
+}
+fn a(c: &Cpu) -> u8 {
+    c.state.reg.a()
+}
+fn hl(c: &Cpu) -> u32 {
+    c.state.reg.get24(Reg16::HL)
+}
+fn hl16(c: &Cpu) -> u16 {
+    c.state.reg.get16(Reg16::HL)
+}
+fn ix(c: &Cpu) -> u32 {
+    c.state.reg.get24(Reg16::IX)
+}
+fn f(c: &Cpu) -> u8 {
+    c.state.reg.get8(Reg8::F)
+}
+fn flag(c: &Cpu, fl: Flag) -> bool {
+    c.state.reg.get_flag(fl)
+}
 
-fn set_a(c: &mut Cpu, v: u8) { c.state.reg.set8(Reg8::A, v); }
-fn set_hl24(c: &mut Cpu, v: u32) { c.state.reg.set24(Reg16::HL, v); }
-fn set_hl16(c: &mut Cpu, v: u16) { c.state.reg.set16(Reg16::HL, v); }
-fn set_bc24(c: &mut Cpu, v: u32) { c.state.reg.set24(Reg16::BC, v); }
-fn set_ix24(c: &mut Cpu, v: u32) { c.state.reg.set24(Reg16::IX, v); }
-fn set_iy24(c: &mut Cpu, v: u32) { c.state.reg.set24(Reg16::IY, v); }
-fn set_spl(c: &mut Cpu, v: u32) { c.state.reg.set24(Reg16::SP, v); }
-fn set_sps(c: &mut Cpu, v: u16) { c.state.reg.set16(Reg16::SP, v); }
-fn set_flag(c: &mut Cpu, fl: Flag, v: bool) { c.state.reg.put_flag(fl, v); }
+fn set_a(c: &mut Cpu, v: u8) {
+    c.state.reg.set8(Reg8::A, v);
+}
+fn set_hl24(c: &mut Cpu, v: u32) {
+    c.state.reg.set24(Reg16::HL, v);
+}
+fn set_hl16(c: &mut Cpu, v: u16) {
+    c.state.reg.set16(Reg16::HL, v);
+}
+fn set_bc24(c: &mut Cpu, v: u32) {
+    c.state.reg.set24(Reg16::BC, v);
+}
+fn set_ix24(c: &mut Cpu, v: u32) {
+    c.state.reg.set24(Reg16::IX, v);
+}
+fn set_iy24(c: &mut Cpu, v: u32) {
+    c.state.reg.set24(Reg16::IY, v);
+}
+fn set_spl(c: &mut Cpu, v: u32) {
+    c.state.reg.set24(Reg16::SP, v);
+}
+fn set_sps(c: &mut Cpu, v: u16) {
+    c.state.reg.set16(Reg16::SP, v);
+}
+fn set_flag(c: &mut Cpu, fl: Flag, v: bool) {
+    c.state.reg.put_flag(fl, v);
+}
 
 fn exec(c: &mut Cpu, m: &mut SparseMem) {
     c.execute_instruction(m);
@@ -141,7 +199,8 @@ fn t05_ld_mb_a_adl() {
     let (mut c, mut m) = setup();
     c.state.reg.adl = true;
     set_a(&mut c, 0x34);
-    m.w8(0x00, 0xed); m.w8(0x01, 0x6d); // LD MB,A
+    m.w8(0x00, 0xed);
+    m.w8(0x01, 0x6d); // LD MB,A
     exec(&mut c, &mut m);
     assert_eq!(mbase(&c), 0x34);
 }
@@ -154,7 +213,8 @@ fn t06_ld_mb_a_z80_nop() {
     let (mut c, mut m) = setup();
     c.state.reg.mbase = 0x12;
     set_a(&mut c, 0x34);
-    m.w8(0x00, 0xed); m.w8(0x01, 0x6d); // LD MB,A
+    m.w8(0x00, 0xed);
+    m.w8(0x01, 0x6d); // LD MB,A
     exec(&mut c, &mut m);
     assert_eq!(mbase(&c), 0x12);
 }
@@ -167,7 +227,8 @@ fn t07_ld_a_mb_adl() {
     let (mut c, mut m) = setup();
     c.state.reg.adl = true;
     c.state.reg.mbase = 0x56;
-    m.w8(0x00, 0xed); m.w8(0x01, 0x6e); // LD A,MB
+    m.w8(0x00, 0xed);
+    m.w8(0x01, 0x6e); // LD A,MB
     exec(&mut c, &mut m);
     assert_eq!(a(&c), 0x56);
 }
@@ -180,7 +241,8 @@ fn t08_ld_a_mb_z80_nop() {
     let (mut c, mut m) = setup();
     c.state.reg.mbase = 0x56;
     set_a(&mut c, 0x99);
-    m.w8(0x00, 0xed); m.w8(0x01, 0x6e); // LD A,MB
+    m.w8(0x00, 0xed);
+    m.w8(0x01, 0x6e); // LD A,MB
     exec(&mut c, &mut m);
     assert_eq!(a(&c), 0x99);
 }
@@ -481,7 +543,8 @@ fn t28_24bit_adc_hl_bc_includes_carry() {
     set_hl24(&mut c, 0x000001);
     set_bc24(&mut c, 0x000001);
     set_flag(&mut c, Flag::C, true);
-    m.w8(0x00, 0xed); m.w8(0x01, 0x4a); // ADC HL,BC
+    m.w8(0x00, 0xed);
+    m.w8(0x01, 0x4a); // ADC HL,BC
     exec(&mut c, &mut m);
     assert_eq!(hl(&c), 0x000003);
 }
@@ -496,7 +559,8 @@ fn t29_24bit_sbc_hl_bc_borrow() {
     set_hl24(&mut c, 0x000000);
     set_bc24(&mut c, 0x000001);
     set_flag(&mut c, Flag::C, false);
-    m.w8(0x00, 0xed); m.w8(0x01, 0x42); // SBC HL,BC
+    m.w8(0x00, 0xed);
+    m.w8(0x01, 0x42); // SBC HL,BC
     exec(&mut c, &mut m);
     assert_eq!(hl(&c), 0xffffff);
     assert!(flag(&c, Flag::C));
@@ -511,7 +575,8 @@ fn t30_add_ix_sp_uses_spl_in_adl() {
     c.state.reg.adl = true;
     set_ix24(&mut c, 0x000100);
     set_spl(&mut c, 0x000200);
-    m.w8(0x00, 0xdd); m.w8(0x01, 0x39); // ADD IX,SP
+    m.w8(0x00, 0xdd);
+    m.w8(0x01, 0x39); // ADD IX,SP
     exec(&mut c, &mut m);
     assert_eq!(ix(&c), 0x000300);
 }
@@ -526,7 +591,8 @@ fn t31_add_s_ix_sp_uses_sps() {
     set_ix24(&mut c, 0x000100);
     set_sps(&mut c, 0x0200);
     m.w8(0x00, 0x40); // .SIS
-    m.w8(0x01, 0xdd); m.w8(0x02, 0x39); // ADD IX,SP
+    m.w8(0x01, 0xdd);
+    m.w8(0x02, 0x39); // ADD IX,SP
     exec(&mut c, &mut m);
     assert_eq!(ix(&c), 0x000300);
 }
@@ -539,7 +605,8 @@ fn t32_mlt_hl_8x8_16() {
     let (mut c, mut m) = setup();
     c.state.reg.adl = true;
     c.state.reg.set16(Reg16::HL, 0x1234);
-    m.w8(0x00, 0xed); m.w8(0x01, 0x6c); // MLT HL
+    m.w8(0x00, 0xed);
+    m.w8(0x01, 0x6c); // MLT HL
     exec(&mut c, &mut m);
     assert_eq!(hl16(&c), 0x03a8);
 }
@@ -880,7 +947,8 @@ fn t53_indexed_adl_positive_disp() {
     c.state.reg.adl = true;
     set_ix24(&mut c, 0x123450);
     m.w8(0x123456, 0x9a);
-    m.w8(0x00, 0xdd); m.w8(0x01, 0x7e); // LD A,(IX+d)
+    m.w8(0x00, 0xdd);
+    m.w8(0x01, 0x7e); // LD A,(IX+d)
     m.w8(0x02, 0x06);
     exec(&mut c, &mut m);
     assert_eq!(a(&c), 0x9a);
@@ -895,7 +963,8 @@ fn t54_indexed_adl_negative_disp() {
     c.state.reg.adl = true;
     set_ix24(&mut c, 0x123460);
     m.w8(0x123450, 0x9a);
-    m.w8(0x00, 0xdd); m.w8(0x01, 0x7e); // LD A,(IX+d)
+    m.w8(0x00, 0xdd);
+    m.w8(0x01, 0x7e); // LD A,(IX+d)
     m.w8(0x02, 0xf0); // -16
     exec(&mut c, &mut m);
     assert_eq!(a(&c), 0x9a);
@@ -912,7 +981,8 @@ fn t55_indexed_s_adl_mbase_page() {
     set_ix24(&mut c, 0x123450);
     m.w8(0x773456, 0x9a);
     m.w8(0x00, 0x40); // .SIS
-    m.w8(0x01, 0xdd); m.w8(0x02, 0x7e); // LD A,(IX+d)
+    m.w8(0x01, 0xdd);
+    m.w8(0x02, 0x7e); // LD A,(IX+d)
     m.w8(0x03, 0x06);
     exec(&mut c, &mut m);
     assert_eq!(a(&c), 0x9a);
@@ -927,7 +997,8 @@ fn t56_indexed_l_z80_full_ix() {
     set_ix24(&mut c, 0x123450);
     m.w8(0x123456, 0x9a);
     m.w8(0x00, 0x49); // .LIS
-    m.w8(0x01, 0xdd); m.w8(0x02, 0x7e); // LD A,(IX+d)
+    m.w8(0x01, 0xdd);
+    m.w8(0x02, 0x7e); // LD A,(IX+d)
     m.w8(0x03, 0x06);
     fast_exec(&mut c, &mut m);
     assert_eq!(a(&c), 0x9a);
@@ -942,7 +1013,9 @@ fn t57_lea_hl_ix_d_adl_full() {
     c.state.reg.adl = true;
     set_ix24(&mut c, 0x00ffff);
     // LEA HL,IX+d = ED 22 d
-    m.w8(0x00, 0xed); m.w8(0x01, 0x22); m.w8(0x02, 0x01);
+    m.w8(0x00, 0xed);
+    m.w8(0x01, 0x22);
+    m.w8(0x02, 0x01);
     exec(&mut c, &mut m);
     assert_eq!(hl(&c), 0x010000);
 }
@@ -956,7 +1029,8 @@ fn t58_lea_s_hl_ix_d_adl_short() {
     c.state.reg.adl = true;
     set_ix24(&mut c, 0x12ffff);
     m.w8(0x00, 0x40); // .SIS
-    m.w8(0x01, 0xed); m.w8(0x02, 0x22); // LEA HL,IX+d
+    m.w8(0x01, 0xed);
+    m.w8(0x02, 0x22); // LEA HL,IX+d
     m.w8(0x03, 0x01);
     exec(&mut c, &mut m);
     assert_eq!(hl16(&c), 0x0000);
@@ -970,7 +1044,8 @@ fn t59_lea_l_hl_ix_d_z80_long() {
     let (mut c, mut m) = setup();
     set_ix24(&mut c, 0x12ffff);
     m.w8(0x00, 0x49); // .LIS
-    m.w8(0x01, 0xed); m.w8(0x02, 0x22); // LEA HL,IX+d
+    m.w8(0x01, 0xed);
+    m.w8(0x02, 0x22); // LEA HL,IX+d
     m.w8(0x03, 0x01);
     fast_exec(&mut c, &mut m);
     assert_eq!(hl(&c), 0x130000);
@@ -985,7 +1060,8 @@ fn t60_pea_ix_d_adl_3byte() {
     c.state.reg.adl = true;
     set_ix24(&mut c, 0x123450);
     set_spl(&mut c, 0x200003);
-    m.w8(0x00, 0xed); m.w8(0x01, 0x65); // PEA IX+d
+    m.w8(0x00, 0xed);
+    m.w8(0x01, 0x65); // PEA IX+d
     m.w8(0x02, 0x06);
     exec(&mut c, &mut m);
     assert_eq!(spl(&c), 0x200000);
@@ -1005,7 +1081,8 @@ fn t61_pea_s_ix_d_adl_2byte() {
     set_sps(&mut c, 0x4002);
     c.state.reg.mbase = 0x20;
     m.w8(0x00, 0x40); // .SIS
-    m.w8(0x01, 0xed); m.w8(0x02, 0x65); // PEA IX+d
+    m.w8(0x01, 0xed);
+    m.w8(0x02, 0x65); // PEA IX+d
     m.w8(0x03, 0x06);
     exec(&mut c, &mut m);
     assert_eq!(sps(&c), 0x4000);
@@ -1023,7 +1100,8 @@ fn t62_pea_l_iy_d_z80_3byte() {
     set_spl(&mut c, 0x200003);
     // PEA IY+d = ED 66 d
     m.w8(0x00, 0x49); // .LIS
-    m.w8(0x01, 0xed); m.w8(0x02, 0x66); // PEA IY+d
+    m.w8(0x01, 0xed);
+    m.w8(0x02, 0x66); // PEA IY+d
     m.w8(0x03, 0x06);
     fast_exec(&mut c, &mut m);
     assert_eq!(spl(&c), 0x200000);
@@ -1595,7 +1673,8 @@ fn t93_rst_s_adl_to_z80() {
 fn t94_stmix_sets_madl() {
     let (mut c, mut m) = setup();
     c.state.reg.madl = false;
-    m.w8(0x00, 0xed); m.w8(0x01, 0x7d); // STMIX
+    m.w8(0x00, 0xed);
+    m.w8(0x01, 0x7d); // STMIX
     exec(&mut c, &mut m);
     assert!(madl(&c));
 }
@@ -1607,7 +1686,8 @@ fn t94_stmix_sets_madl() {
 fn t95_rsmix_clears_madl() {
     let (mut c, mut m) = setup();
     c.state.reg.madl = true;
-    m.w8(0x00, 0xed); m.w8(0x01, 0x7e); // RSMIX
+    m.w8(0x00, 0xed);
+    m.w8(0x01, 0x7e); // RSMIX
     exec(&mut c, &mut m);
     assert!(!madl(&c));
 }
@@ -1666,7 +1746,8 @@ fn t98_im1_irq_adl_madl_1() {
     set_spl(&mut c, 0x200004);
     c.state.reg.iff1 = true;
     // set IM 1
-    m.w8(0x123456, 0xed); m.w8(0x123457, 0x56);
+    m.w8(0x123456, 0xed);
+    m.w8(0x123457, 0x56);
     exec(&mut c, &mut m);
     c.state.set_pc(0x123456);
     set_spl(&mut c, 0x200004);
@@ -1697,7 +1778,8 @@ fn t99_reti_l_restores_z80() {
     m.w8(0x200001, 0x56);
     m.w8(0x200002, 0x34);
     m.w8(0x00, 0x49); // .LIS
-    m.w8(0x01, 0xed); m.w8(0x02, 0x4d); // RETI
+    m.w8(0x01, 0xed);
+    m.w8(0x02, 0x4d); // RETI
     exec(&mut c, &mut m);
     assert!(!adl(&c));
     assert_eq!(pc(&c), 0x123456);

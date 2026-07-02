@@ -1,5 +1,5 @@
-use super::opcode::*;
 use super::environment::*;
+use super::opcode::*;
 use super::registers::*;
 
 /*
@@ -63,7 +63,32 @@ pub fn build_ld_a_r_or_i(src: Reg8) -> Opcode {
             env.state.reg.put_flag(Flag::Z, value == 0);
             env.state.reg.put_flag(Flag::S, (value as i8) < 0);
             env.state.reg.put_flag(Flag::P, env.state.reg.iff2);
-        })
+        }),
+    }
+}
+
+pub fn build_ld_i_hl() -> Opcode {
+    Opcode {
+        name: "LD I, HL".to_string(),
+        action: Box::new(move |env: &mut Environment| {
+            env.state.reg.set_i16(env.state.reg.get16(Reg16::HL));
+        }),
+    }
+}
+
+pub fn build_ld_hl_i() -> Opcode {
+    Opcode {
+        name: "LD HL, I".to_string(),
+        action: Box::new(move |env: &mut Environment| {
+            let value = env.state.reg.get_i16();
+            env.state.reg.set16(Reg16::HL, value);
+
+            env.state.reg.put_flag(Flag::N, false);
+            env.state.reg.put_flag(Flag::H, false);
+            env.state.reg.put_flag(Flag::Z, value == 0);
+            env.state.reg.put_flag(Flag::S, (value & 0x8000) != 0);
+            env.state.reg.put_flag(Flag::P, env.state.reg.iff2);
+        }),
     }
 }
 
@@ -71,16 +96,20 @@ pub fn build_ld_a_r_or_i(src: Reg8) -> Opcode {
 pub fn build_ld_r_r(dst: Reg8, src: Reg8, _special: bool) -> Opcode {
     assert_ne!(src, Reg8::R);
     assert_ne!(src, Reg8::I);
-    if src != Reg8::_HL && dst != Reg8::_HL
-            && src != Reg8::H && dst != Reg8::H
-            && src != Reg8::L && dst != Reg8::L {
+    if src != Reg8::_HL
+        && dst != Reg8::_HL
+        && src != Reg8::H
+        && dst != Reg8::H
+        && src != Reg8::L
+        && dst != Reg8::L
+    {
         // Faster version
         Opcode {
             name: format!("LD {}, {}", dst, src),
             action: Box::new(move |env: &mut Environment| {
                 let value = env.state.reg.get8(src);
                 env.state.reg.set8(dst, value);
-            })
+            }),
         }
     } else {
         // Full version
@@ -102,7 +131,7 @@ pub fn build_ld_r_r(dst: Reg8, src: Reg8, _special: bool) -> Opcode {
                 } else {
                     env.set_reg(dst, value);
                 }
-            })
+            }),
         }
     }
 }
@@ -113,7 +142,7 @@ pub fn build_ld_r_n(r: Reg8) -> Opcode {
         action: Box::new(move |env: &mut Environment| {
             let value = env.advance_pc();
             env.set_reg(r, value);
-        })
+        }),
     }
 }
 
@@ -125,7 +154,7 @@ pub fn build_ld_a_prr(rr: Reg16) -> Opcode {
             let address = env.reg16mbase_or_24(rr);
             let value = env.peek(address);
             env.state.reg.set_a(value);
-        })
+        }),
     }
 }
 
@@ -136,7 +165,7 @@ pub fn build_ld_a_pnn() -> Opcode {
             let address = env.advance_immediate_16mbase_or_24();
             let value = env.peek(address);
             env.state.reg.set_a(value);
-        })
+        }),
     }
 }
 
@@ -148,9 +177,8 @@ pub fn build_ld_prr_a(rr: Reg16) -> Opcode {
             let value = env.state.reg.a();
             let address = env.reg16mbase_or_24(rr);
             env.poke(address, value);
-        })
+        }),
     }
-    
 }
 
 pub fn build_ld_pnn_a() -> Opcode {
@@ -160,11 +188,9 @@ pub fn build_ld_pnn_a() -> Opcode {
             let value = env.state.reg.a();
             let address = env.advance_immediate_16mbase_or_24();
             env.poke(address, value);
-        })
+        }),
     }
-    
 }
-
 
 // 16 bit load
 pub fn build_ld_rr_nn(rr: Reg16) -> Opcode {
@@ -173,7 +199,7 @@ pub fn build_ld_rr_nn(rr: Reg16) -> Opcode {
         action: Box::new(move |env: &mut Environment| {
             let value: u32 = env.advance_immediate16or24();
             env.set_reg16or24(rr, value);
-        })
+        }),
     }
 }
 
@@ -187,7 +213,7 @@ pub fn build_ld_sp_hl() -> Opcode {
             } else {
                 env.set_reg16(Reg16::SP, value as u16);
             }
-        })
+        }),
     }
 }
 
@@ -202,7 +228,7 @@ pub fn build_ld_pnn_rr(rr: Reg16, _fast: bool) -> Opcode {
             } else {
                 env.poke16(address, value as u16);
             }
-        })
+        }),
     }
 }
 
@@ -218,7 +244,7 @@ pub fn build_ld_rr_pnn(rr: Reg16, _fast: bool) -> Opcode {
                 let value = env.peek16(address);
                 env.set_reg16(rr, value);
             }
-        })
+        }),
     }
 }
 
@@ -227,7 +253,7 @@ pub fn build_ex_af() -> Opcode {
         name: "EX AF, AF'".to_string(),
         action: Box::new(|env: &mut Environment| {
             env.state.reg.swap16(Reg16::AF);
-        })
+        }),
     }
 }
 
@@ -238,7 +264,7 @@ pub fn build_exx() -> Opcode {
             env.state.reg.swap24(Reg16::BC);
             env.state.reg.swap24(Reg16::DE);
             env.state.reg.swap24(Reg16::HL); // NO IX, IY variant
-        })
+        }),
     }
 }
 
@@ -248,14 +274,18 @@ pub fn build_ex_de_hl() -> Opcode {
         action: Box::new(move |env: &mut Environment| {
             if env.state.is_op_long() {
                 let temp = env.state.reg.get24(Reg16::HL); // No IX/IY variant
-                env.state.reg.set24(Reg16::HL, env.state.reg.get24(Reg16::DE));
+                env.state
+                    .reg
+                    .set24(Reg16::HL, env.state.reg.get24(Reg16::DE));
                 env.state.reg.set24(Reg16::DE, temp);
             } else {
                 let temp = env.state.reg.get16(Reg16::HL); // No IX/IY variant
-                env.state.reg.set16(Reg16::HL, env.state.reg.get16(Reg16::DE));
+                env.state
+                    .reg
+                    .set16(Reg16::HL, env.state.reg.get16(Reg16::DE));
                 env.state.reg.set16(Reg16::DE, temp);
             }
-        })         
+        }),
     }
 }
 
@@ -272,11 +302,11 @@ pub fn build_ex_psp_hl() -> Opcode {
                 env.set_reg16_preserve_17_to_24(Reg16::HL, env.peek16(address));
                 env.poke16(address, temp as u16);
             }
-        })         
+        }),
     }
 }
 
-pub fn build_ld_block((inc, repeat, postfix) : (bool, bool, &'static str)) -> Opcode {
+pub fn build_ld_block((inc, repeat, postfix): (bool, bool, &'static str)) -> Opcode {
     Opcode {
         name: format!("LD{}", postfix),
         action: Box::new(move |env: &mut Environment| {
@@ -306,8 +336,8 @@ pub fn build_ld_block((inc, repeat, postfix) : (bool, bool, &'static str)) -> Op
             if repeat && bc != 0 {
                 // Back to redo the instruction
                 let instruction_len = match env.state.sz_prefix {
-                        crate::state::SizePrefix::None => 2,
-                        _ => 3
+                    crate::state::SizePrefix::None => 2,
+                    _ => 3,
                 };
                 let pc = env.wrap_address(env.state.pc(), -instruction_len);
                 env.state.set_pc(pc);
@@ -319,7 +349,7 @@ pub fn build_ld_block((inc, repeat, postfix) : (bool, bool, &'static str)) -> Op
                     env.sys.use_cycles(-1);
                 }
             }
-        })         
+        }),
     }
 }
 
@@ -328,7 +358,7 @@ pub fn build_ld_a_mb() -> Opcode {
         name: "LD A, MB".to_string(),
         action: Box::new(|env: &mut Environment| {
             env.state.reg.set8(Reg8::A, env.state.reg.mbase);
-        })
+        }),
     }
 }
 
@@ -337,7 +367,7 @@ pub fn build_ld_mb_a() -> Opcode {
         name: "LD MB, A".to_string(),
         action: Box::new(|env: &mut Environment| {
             env.state.reg.mbase = env.state.reg.get8(Reg8::A);
-        })
+        }),
     }
 }
 
@@ -356,7 +386,7 @@ pub fn build_ld_idx_disp_rr(index_reg: Reg16, src: Reg16) -> Opcode {
                 let address = env.state.reg.get16_mbase(index_reg).wrapping_add(imm);
                 env.poke16(address, value);
             }
-        })
+        }),
     }
 }
 
@@ -374,7 +404,7 @@ pub fn build_ld_rr_idx_disp(dest: Reg16, index_reg: Reg16) -> Opcode {
                 let value = env.peek16(address);
                 env.state.reg.set16(dest, value);
             }
-        })
+        }),
     }
 }
 
@@ -391,7 +421,7 @@ pub fn build_ld_rr_ind_hl(dest: Reg16) -> Opcode {
                 let value = env.peek16(address);
                 env.state.reg.set16(dest, value);
             }
-        })
+        }),
     }
 }
 
@@ -408,6 +438,6 @@ pub fn build_ld_ind_hl_rr(src: Reg16) -> Opcode {
                 let value = env.state.reg.get16(src);
                 env.poke16(address, value);
             }
-        })
+        }),
     }
 }

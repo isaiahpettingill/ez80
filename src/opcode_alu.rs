@@ -1,7 +1,7 @@
-use super::opcode::*;
 use super::environment::*;
-use super::registers::*;
+use super::opcode::*;
 use super::operators::*;
+use super::registers::*;
 
 pub fn build_lea_rr_ind_offset(dest: Reg16, src: Reg16) -> Opcode {
     Opcode {
@@ -15,7 +15,7 @@ pub fn build_lea_rr_ind_offset(dest: Reg16, src: Reg16) -> Opcode {
                 let value = env.state.reg.get16(src).wrapping_add(imm as u16);
                 env.state.reg.set16(dest, value);
             }
-        })
+        }),
     }
 }
 
@@ -31,7 +31,7 @@ pub fn build_pea(src: Reg16) -> Opcode {
                 let value = env.state.reg.get16(src).wrapping_add(imm as u16);
                 env.push(value as u32);
             }
-        })
+        }),
     }
 }
 
@@ -42,7 +42,7 @@ pub fn build_tst_a_r(reg: Reg8) -> Opcode {
             let a = env.state.reg.a();
             let b = env.reg8_ext(reg);
             operator_tst(env, a, b);
-        })
+        }),
     }
 }
 
@@ -53,7 +53,7 @@ pub fn build_tst_a_n() -> Opcode {
             let a = env.state.reg.a();
             let b = env.advance_pc();
             operator_tst(env, a, b);
-        })
+        }),
     }
 }
 
@@ -71,7 +71,7 @@ pub fn build_operator_a_idx_offset(idx: Reg16, (op, name): (Operator, &str)) -> 
             let b = env.peek(address);
             let v = op(env, a, b);
             env.state.reg.set_a(v);
-        })
+        }),
     }
 }
 
@@ -85,7 +85,7 @@ pub fn build_operator_a_r(r: Reg8, (op, name): (Operator, &str)) -> Opcode {
                 let b = env.state.reg.get8(r);
                 let v = op(env, a, b);
                 env.state.reg.set_a(v);
-            })
+            }),
         }
     } else {
         Opcode {
@@ -96,7 +96,7 @@ pub fn build_operator_a_r(r: Reg8, (op, name): (Operator, &str)) -> Opcode {
                 let v = op(env, a, b);
 
                 env.state.reg.set_a(v);
-            })
+            }),
         }
     }
 }
@@ -110,11 +110,11 @@ pub fn build_operator_a_n((op, name): (Operator, &str)) -> Opcode {
             let v = op(env, a, b);
 
             env.state.reg.set_a(v);
-        })
+        }),
     }
 }
 
-pub fn build_cp_block((inc, repeat, postfix) : (bool, bool, &'static str)) -> Opcode {
+pub fn build_cp_block((inc, repeat, postfix): (bool, bool, &'static str)) -> Opcode {
     Opcode {
         name: format!("CP{}", postfix),
         action: Box::new(move |env: &mut Environment| {
@@ -139,14 +139,14 @@ pub fn build_cp_block((inc, repeat, postfix) : (bool, bool, &'static str)) -> Op
             env.state.reg.set_flag(Flag::N);
             env.state.reg.put_flag(Flag::P, bc != 0);
             env.state.reg.put_flag(Flag::C, c_bak); // C unchanged
-            // S, Z and H set by operator_cp()
+                                                    // S, Z and H set by operator_cp()
 
-            if repeat && bc != 0 &&  a != b {
+            if repeat && bc != 0 && a != b {
                 // Back to redo the instruction
                 let pc = env.wrap_address(env.state.pc(), -2);
                 env.state.set_pc(pc);
             }
-        })
+        }),
     }
 }
 
@@ -159,6 +159,6 @@ pub fn build_mlt_rr(reg: Reg16) -> Opcode {
             let b = (r >> 8) & 0xff;
             env.state.reg.set16(reg, a * b);
             env.sys.use_cycles(4);
-        })
+        }),
     }
 }

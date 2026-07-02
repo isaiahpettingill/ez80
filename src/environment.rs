@@ -1,18 +1,15 @@
 use super::machine::*;
 use super::registers::*;
-use super::state::{ State, SizePrefix };
+use super::state::{SizePrefix, State};
 
 pub struct Environment<'a> {
     pub state: &'a mut State,
-    pub sys: &'a mut dyn Machine
+    pub sys: &'a mut dyn Machine,
 }
 
-impl <'a> Environment<'_> {
+impl<'a> Environment<'_> {
     pub fn new(state: &'a mut State, sys: &'a mut dyn Machine) -> Environment<'a> {
-        Environment {
-            state,
-            sys
-        }
+        Environment { state, sys }
     }
 
     pub fn wrap_address24(&self, address: u32, increment: i32) -> u32 {
@@ -82,26 +79,28 @@ impl <'a> Environment<'_> {
 
     /// Returns the memory contents in [address] as word
     pub fn peek16(&self, address: u32) -> u16 {
-        self.sys.peek(address) as u16
-        + ((self.sys.peek(self.wrap_address(address, 1)) as u16) << 8)
+        self.sys.peek(address) as u16 + ((self.sys.peek(self.wrap_address(address, 1)) as u16) << 8)
     }
 
     /// Sets the memory content to the word [value] in [address]
     pub fn poke16(&mut self, address: u32, value: u16) {
-        self.sys.poke(address, value as u8 );
-        self.sys.poke(self.wrap_address(address, 1), (value >> 8) as u8);
+        self.sys.poke(address, value as u8);
+        self.sys
+            .poke(self.wrap_address(address, 1), (value >> 8) as u8);
     }
 
     pub fn peek24(&self, address: u32) -> u32 {
         self.sys.peek(address) as u32
-        + ((self.sys.peek(self.wrap_address(address, 1)) as u32) << 8)
-        + ((self.sys.peek(self.wrap_address(address, 2)) as u32) << 16)
+            + ((self.sys.peek(self.wrap_address(address, 1)) as u32) << 8)
+            + ((self.sys.peek(self.wrap_address(address, 2)) as u32) << 16)
     }
 
     pub fn poke24(&mut self, address: u32, value: u32) {
-        self.sys.poke(address, value as u8 );
-        self.sys.poke(self.wrap_address(address, 1), (value >> 8) as u8);
-        self.sys.poke(self.wrap_address(address, 2), (value >> 16) as u8);
+        self.sys.poke(address, value as u8);
+        self.sys
+            .poke(self.wrap_address(address, 1), (value >> 8) as u8);
+        self.sys
+            .poke(self.wrap_address(address, 2), (value >> 16) as u8);
     }
 
     pub fn peek_pc(&self) -> u8 {
@@ -166,7 +165,7 @@ impl <'a> Environment<'_> {
     }
 
     pub fn push_byte_sps(&mut self, value: u8) {
-        let sps = self.wrap_address16( self.state.reg.get16_mbase(Reg16::SP), -1);
+        let sps = self.wrap_address16(self.state.reg.get16_mbase(Reg16::SP), -1);
         self.sys.poke(sps, value);
         self.state.reg.set16(Reg16::SP, sps as u16);
     }
@@ -174,12 +173,14 @@ impl <'a> Environment<'_> {
     pub fn pop_byte_sps(&mut self) -> u8 {
         let sps = self.state.reg.get16_mbase(Reg16::SP);
         let l = self.sys.peek(sps);
-        self.state.reg.set16(Reg16::SP, self.wrap_address16(sps, 1) as u16);
+        self.state
+            .reg
+            .set16(Reg16::SP, self.wrap_address16(sps, 1) as u16);
         l
     }
 
     pub fn push_byte_spl(&mut self, value: u8) {
-        let spl = self.wrap_address24( self.state.reg.get24(Reg16::SP), -1);
+        let spl = self.wrap_address24(self.state.reg.get24(Reg16::SP), -1);
         self.sys.poke(spl, value);
         self.state.reg.set24(Reg16::SP, spl);
     }
@@ -250,7 +251,11 @@ impl <'a> Environment<'_> {
                     }
                 }
                 prefix => {
-                    eprintln!("invalid size prefix {:?} to RET at PC=${:x}", prefix, self.state.pc());
+                    eprintln!(
+                        "invalid size prefix {:?} to RET at PC=${:x}",
+                        prefix,
+                        self.state.pc()
+                    );
                     let pc = self.pop();
                     self.state.set_pc(pc);
                 }
@@ -279,7 +284,11 @@ impl <'a> Environment<'_> {
                     }
                 }
                 prefix => {
-                    eprintln!("invalid size prefix {:?} to RET at PC=${:x}", prefix, self.state.pc());
+                    eprintln!(
+                        "invalid size prefix {:?} to RET at PC=${:x}",
+                        prefix,
+                        self.state.pc()
+                    );
                     let pc = self.pop();
                     self.state.set_pc(pc);
                 }
@@ -307,7 +316,7 @@ impl <'a> Environment<'_> {
         }
     }
 
-    pub fn is_alt_index(& self) -> bool {
+    pub fn is_alt_index(&self) -> bool {
         self.state.index != Reg16::HL
     }
 
@@ -323,7 +332,7 @@ impl <'a> Environment<'_> {
         self.state.displacement = self.advance_pc() as i8;
     }
 
-    pub fn index_value(& self) -> u32 {
+    pub fn index_value(&self) -> u32 {
         if self.state.is_op_long() {
             self.state.reg.get24(self.state.index)
         } else {
@@ -350,18 +359,18 @@ impl <'a> Environment<'_> {
             Reg16::IX => match reg {
                 Reg8::H => Reg8::IXH,
                 Reg8::L => Reg8::IXL,
-                _ => reg
+                _ => reg,
             },
             Reg16::IY => match reg {
                 Reg8::H => Reg8::IYH,
                 Reg8::L => Reg8::IYL,
-                _ => reg
+                _ => reg,
             },
-            _ => reg
+            _ => reg,
         }
     }
 
-    pub fn reg8_ext(& self, reg: Reg8) -> u8 {
+    pub fn reg8_ext(&self, reg: Reg8) -> u8 {
         if reg == Reg8::_HL {
             self.sys.peek(self.index_address())
         } else {
@@ -377,7 +386,7 @@ impl <'a> Environment<'_> {
         }
     }
 
-    pub fn reg16or24_ext(& self, rr: Reg16) -> u32 {
+    pub fn reg16or24_ext(&self, rr: Reg16) -> u32 {
         if self.state.is_op_long() {
             if rr == Reg16::HL {
                 self.state.reg.get24(self.state.index)
@@ -421,7 +430,9 @@ impl <'a> Environment<'_> {
 
     pub fn set_reg16_preserve_17_to_24(&mut self, rr: Reg16, value: u16) {
         if rr == Reg16::HL {
-            self.state.reg.set16_preserve_17_to_24(self.state.index, value);
+            self.state
+                .reg
+                .set16_preserve_17_to_24(self.state.index, value);
         } else {
             self.state.reg.set16_preserve_17_to_24(rr, value);
         }

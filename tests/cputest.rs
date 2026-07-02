@@ -62,8 +62,8 @@ fn cpu_test(mut cpu: Cpu) {
                     let ch = cpu.registers().get8(Reg8::E) as char;
                     print!("{}", ch);
                     msg.push(ch);
-                },
-                _ => panic!("BDOS command not implemented")
+                }
+                _ => panic!("BDOS command not implemented"),
             }
         }
     }

@@ -1,13 +1,13 @@
-use crate::machine::Machine;
 use crate::cpu::Cpu;
 use crate::environment::Environment;
+use crate::machine::Machine;
 use crate::registers::*;
 
 #[derive(Clone, Debug)]
 pub struct Disasm {
     pub loc: u32,
     pub asm: String,
-    pub bytes: Vec<u8>
+    pub bytes: Vec<u8>,
 }
 
 /**
@@ -16,7 +16,13 @@ pub struct Disasm {
  * Tries to not mutate state, but needs a mutable cpu ref...
  * iz80 disassembly is a bit awkward due to the way it increments the PC
  */
-pub fn disassemble(machine: &mut dyn Machine, cpu: &mut Cpu, adl_override: Option<bool>, start: u32, end: u32) -> Vec<Disasm> {
+pub fn disassemble(
+    machine: &mut dyn Machine,
+    cpu: &mut Cpu,
+    adl_override: Option<bool>,
+    start: u32,
+    end: u32,
+) -> Vec<Disasm> {
     let mut dis: Vec<Disasm> = vec![];
     let old_state = cpu.state.clone();
 
@@ -27,7 +33,6 @@ pub fn disassemble(machine: &mut dyn Machine, cpu: &mut Cpu, adl_override: Optio
     cpu.state.reg.mbase = (start >> 16) as u8;
 
     while cpu.state.pc() < end {
-
         let opcode_start = cpu.state.pc();
         let opcode_asm = cpu.disasm_instruction(machine);
 
@@ -45,7 +50,7 @@ pub fn disassemble(machine: &mut dyn Machine, cpu: &mut Cpu, adl_override: Optio
         dis.push(Disasm {
             loc: opcode_start,
             asm: opcode_asm,
-            bytes: instruction_bytes
+            bytes: instruction_bytes,
         });
 
         cpu.state.clear_sz_prefix();

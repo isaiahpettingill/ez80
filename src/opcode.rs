@@ -1,6 +1,6 @@
-use super::state::SizePrefix;
 use super::environment::*;
 use super::registers::*;
+use super::state::SizePrefix;
 
 type OpcodeFn = dyn Fn(&mut Environment);
 
@@ -15,7 +15,7 @@ impl Opcode {
     }
 
     /// returns String, and u32 PC increment due to immediates
-    /// (the PC increment due to the opcode itself, (and due 
+    /// (the PC increment due to the opcode itself, (and due
     /// to the state.index hack), have already been applied by
     /// the decoder.
     pub fn disasm(&self, env: &Environment) -> (String, u32) {
@@ -42,8 +42,12 @@ impl Opcode {
         // this case is not triggered, because env.state.index is not
         // used (see prefix_dd in decoder_ez80).
         match env.state.index {
-            Reg16::IX => { name = name.replace("HL", "IX"); }
-            Reg16::IY => { name = name.replace("HL", "IY"); }
+            Reg16::IX => {
+                name = name.replace("HL", "IX");
+            }
+            Reg16::IY => {
+                name = name.replace("HL", "IY");
+            }
             _ => {}
         }
 
@@ -68,7 +72,11 @@ impl Opcode {
             // Immediate argument 8 bits signed
             // In assembly it's shown with 2 added as if it were from the opcode pc.
             let d = env.peek_pc() as i8 as i16;
-            let d_str = if d < 0 { format!("-${:x}", -d) } else { format!("+${:x}", d) };
+            let d_str = if d < 0 {
+                format!("-${:x}", -d)
+            } else {
+                format!("+${:x}", d)
+            };
             (name.replace('d', &d_str), 1)
         } else if name.contains('l') {
             // Jump offset as 8 bits signed.
@@ -87,7 +95,7 @@ pub fn build_nop() -> Opcode {
         name: "NOP".to_string(),
         action: Box::new(|_: &mut Environment| {
             // Nothing done
-        })
+        }),
     }
 }
 
@@ -96,7 +104,7 @@ pub fn build_noni_nop() -> Opcode {
         name: "NONINOP".to_string(),
         action: Box::new(|_: &mut Environment| {
             // Nothing done
-        })
+        }),
     }
 }
 
@@ -105,7 +113,7 @@ pub fn build_illegal_instruction() -> Opcode {
         name: "ILLEGAL".to_string(),
         action: Box::new(|env: &mut Environment| {
             env.trap_illegal_instruction();
-        })
+        }),
     }
 }
 
@@ -114,7 +122,16 @@ pub fn build_halt() -> Opcode {
         name: "HALT".to_string(),
         action: Box::new(move |env: &mut Environment| {
             env.state.halted = true;
-        })
+        }),
+    }
+}
+
+pub fn build_slp() -> Opcode {
+    Opcode {
+        name: "SLP".to_string(),
+        action: Box::new(move |env: &mut Environment| {
+            env.state.halted = true;
+        }),
     }
 }
 
@@ -128,7 +145,7 @@ pub fn build_pop_rr(rr: Reg16) -> Opcode {
             } else {
                 env.set_reg16(rr, value as u16);
             }
-        })
+        }),
     }
 }
 
@@ -138,17 +155,17 @@ pub fn build_push_rr(rr: Reg16) -> Opcode {
         action: Box::new(move |env: &mut Environment| {
             let value = env.reg16or24_ext(rr);
             env.push(value);
-        })
+        }),
     }
 }
 
 pub fn build_conf_interrupts(enable: bool) -> Opcode {
-    let name = if enable {"EI"} else  {"DI"};
+    let name = if enable { "EI" } else { "DI" };
     Opcode {
         name: name.to_string(),
         action: Box::new(move |env: &mut Environment| {
             env.state.reg.set_interrupts(enable);
-        })
+        }),
     }
 }
 
@@ -157,7 +174,7 @@ pub fn build_im(im: u8) -> Opcode {
         name: format!("IM {}", im),
         action: Box::new(move |env: &mut Environment| {
             env.state.reg.set_interrupt_mode(im);
-        })
+        }),
     }
 }
 
@@ -166,7 +183,7 @@ pub fn build_stmix() -> Opcode {
         name: "STMIX".to_string(),
         action: Box::new(move |env: &mut Environment| {
             env.state.reg.madl = true;
-        })
+        }),
     }
 }
 
@@ -175,6 +192,6 @@ pub fn build_rsmix() -> Opcode {
         name: "RSMIX".to_string(),
         action: Box::new(move |env: &mut Environment| {
             env.state.reg.madl = false;
-        })
+        }),
     }
 }

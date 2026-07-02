@@ -196,7 +196,7 @@ fn test_cpl() {
     let mut sys = PlainMachine::new();
     let mut cpu = Cpu::new();
 
-    sys.poke(0x0000, 0x2f);  // CPL
+    sys.poke(0x0000, 0x2f); // CPL
     cpu.registers().set_a(0x3d);
 
     cpu.execute_instruction(&mut sys);

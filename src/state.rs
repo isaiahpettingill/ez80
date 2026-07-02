@@ -2,17 +2,17 @@ use super::registers::*;
 
 /// ez80 opcode "suffixes". we call them prefixes here
 /// because they appear before the opcode in machine code
-#[derive(Clone,Copy,Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum SizePrefix {
     None,
     LIL,
     LIS,
     SIL,
-    SIS
+    SIS,
 }
 
 /// Internal state of the CPU
-/// 
+///
 /// Stores the state of the registers and additional hidden execution
 /// state of the CPU.
 #[derive(Clone)]
@@ -26,7 +26,7 @@ pub struct State {
     /// Reset signaled
     pub reset_pending: bool,
     // Alternate index management
-    pub index: Reg16, // Using HL, IX or IY
+    pub index: Reg16,     // Using HL, IX or IY
     pub displacement: i8, // Used for (IX+d) and (iY+d)
     pub sz_prefix: SizePrefix,
     pub instructions_executed: u64,
@@ -63,7 +63,7 @@ impl State {
             SizePrefix::LIL => true,
             SizePrefix::LIS => true,
             SizePrefix::SIL => false,
-            SizePrefix::SIS => false
+            SizePrefix::SIS => false,
         }
     }
 
@@ -73,7 +73,7 @@ impl State {
             SizePrefix::LIL => true,
             SizePrefix::LIS => false,
             SizePrefix::SIL => true,
-            SizePrefix::SIS => false
+            SizePrefix::SIS => false,
         }
     }
 
@@ -102,13 +102,16 @@ impl State {
 
 impl std::fmt::Display for SizePrefix {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{}", match self {
-            &SizePrefix::LIL => ".LIL",
-            &SizePrefix::LIS => ".LIS",
-            &SizePrefix::SIL => ".SIL",
-            &SizePrefix::SIS => ".SIS",
-            &SizePrefix::None => "",
-
-        })
+        write!(
+            f,
+            "{}",
+            match self {
+                &SizePrefix::LIL => ".LIL",
+                &SizePrefix::LIS => ".LIS",
+                &SizePrefix::SIL => ".SIL",
+                &SizePrefix::SIS => ".SIS",
+                &SizePrefix::None => "",
+            }
+        )
     }
 }
