@@ -197,7 +197,8 @@ fn handle_rst_size_prefix(env: &mut Environment, vec: u32) {
                 env.push(pc);
                 env.state.set_pc(vec);
             },
-            SizePrefix::SIL => {
+            SizePrefix::SIL |
+            SizePrefix::SIS => {
                 env.push_byte_sps((pc >> 8) as u8);
                 env.push_byte_sps(pc as u8);
                 env.push_byte_spl((pc >> 16) as u8);
@@ -210,9 +211,6 @@ fn handle_rst_size_prefix(env: &mut Environment, vec: u32) {
                 env.push(pc);
                 env.push_byte_spl(3);
                 env.state.reg.pc = vec;
-            }
-            SizePrefix::SIS => {
-                eprintln!("invalid rst size prefix");
             }
         }
     } else {

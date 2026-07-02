@@ -1552,9 +1552,24 @@ fn t92_rst_l_z80_to_adl() {
 // 93: RST.S ADL→Z80 mixed
 // ============================================================
 #[test]
-#[ignore]
 fn t93_rst_s_adl_to_z80() {
-    // RST with .SIS from ADL prints "invalid rst size prefix"
+    let (mut c, mut m) = setup();
+    c.state.reg.adl = true;
+    c.state.reg.mbase = 0x12;
+    c.state.set_pc(0x100000);
+    set_spl(&mut c, 0x200002);
+    set_sps(&mut c, 0x4002);
+    m.w8(0x100000, 0x40); // .SIS
+    m.w8(0x100001, 0xff); // RST 38h
+    exec(&mut c, &mut m);
+    assert!(!adl(&c));
+    assert_eq!(pc(&c), 0x120038);
+    assert_eq!(sps(&c), 0x4000);
+    assert_eq!(spl(&c), 0x200000);
+    assert_eq!(m.r8(0x124000), 0x02);
+    assert_eq!(m.r8(0x124001), 0x00);
+    assert_eq!(m.r8(0x200000), 0x03);
+    assert_eq!(m.r8(0x200001), 0x10);
 }
 
 // ============================================================
