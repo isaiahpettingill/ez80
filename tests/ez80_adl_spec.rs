@@ -1467,18 +1467,31 @@ fn t87_jp_sil_immediate_illegal() {
 // 88: JP.L (HL) Z80→ADL indirect
 // ============================================================
 #[test]
-#[ignore]
 fn t88_jp_l_hl_z80_to_adl() {
-    // JP (HL) does not currently handle size prefixes for ADL switching
+    let (mut c, mut m) = setup();
+    c.state.reg.mbase = 0x12;
+    set_hl24(&mut c, 0x123456);
+    m.w8(0x120000, 0x5b); // .LIL
+    m.w8(0x120001, 0xe9); // JP (HL)
+    exec(&mut c, &mut m);
+    assert!(adl(&c));
+    assert_eq!(pc(&c), 0x123456);
 }
 
 // ============================================================
 // 89: JP.S (HL) ADL→Z80 indirect
 // ============================================================
 #[test]
-#[ignore]
 fn t89_jp_s_hl_adl_to_z80() {
-    // JP (HL) does not currently handle size prefixes for ADL switching
+    let (mut c, mut m) = setup();
+    c.state.reg.adl = true;
+    c.state.reg.mbase = 0x12;
+    set_hl24(&mut c, 0x003456);
+    m.w8(0x000000, 0x40); // .SIS
+    m.w8(0x000001, 0xe9); // JP (HL)
+    exec(&mut c, &mut m);
+    assert!(!adl(&c));
+    assert_eq!(pc(&c), 0x123456);
 }
 
 // ============================================================

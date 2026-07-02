@@ -104,6 +104,7 @@ pub fn build_jp_hl() -> Opcode {
         action: Box::new(move |env: &mut Environment| {
             // Note: no displacement added to the index
             let address = env.index_value();
+            handle_jump_adl_state(env);
             env.sys.use_cycles(1);
             env.state.set_pc(address);
         })
