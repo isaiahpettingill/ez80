@@ -26,6 +26,10 @@ impl BenchBus {
         self.cycles.get() as u64
     }
 
+    fn reset_cycles(&self) {
+        self.cycles.set(0);
+    }
+
     fn load_repeated(&mut self, pattern: &[u8], instructions: usize) {
         for i in 0..instructions {
             let start = i * pattern.len();
@@ -131,6 +135,47 @@ fn measure_fast(mut cpu: Cpu, mut bus: BenchBus, instructions: usize) -> Measure
     }
 }
 
+fn measure_reference_program(mut cpu: Cpu, mut bus: BenchBus, iterations: usize) -> Measurement {
+    bus.reset_cycles();
+    let start = Instant::now();
+    for _ in 0..iterations {
+        cpu.state.set_pc(0);
+        cpu.state.halted = false;
+        while !cpu.state.halted {
+            cpu.execute_instruction(&mut bus);
+        }
+    }
+    let elapsed = start.elapsed();
+    black_box(cpu.state.pc());
+    black_box(bus.mem[0x2000]);
+    Measurement {
+        instructions: cpu.state.instructions_executed as usize,
+        cycles: bus.cycles(),
+        elapsed,
+    }
+}
+
+fn measure_fast_program(mut cpu: Cpu, mut bus: BenchBus, iterations: usize) -> Measurement {
+    cpu.set_cycles(0);
+    bus.reset_cycles();
+    let start = Instant::now();
+    for _ in 0..iterations {
+        cpu.state.set_pc(0);
+        cpu.state.halted = false;
+        while !cpu.state.halted {
+            cpu.step_fast(&mut bus);
+        }
+    }
+    let elapsed = start.elapsed();
+    black_box(cpu.state.pc());
+    black_box(bus.mem[0x2000]);
+    Measurement {
+        instructions: cpu.state.instructions_executed as usize,
+        cycles: cpu.cycles(),
+        elapsed,
+    }
+}
+
 fn print_row(name: &str, reference: Measurement, fast: Measurement) {
     println!(
         "{:<24} {:>12.0} {:>12.0} {:>12.0} {:>12.0} {:>8.2}x",
@@ -202,6 +247,55 @@ fn bench_run_cycles() {
     );
 }
 
+fn push_ld_abs_a(program: &mut Vec<u8>, address: u16) {
+    program.push(0x32);
+    program.push(address as u8);
+    program.push((address >> 8) as u8);
+}
+
+fn build_sieve_program() -> Vec<u8> {
+    let mut program = Vec::new();
+    let mut prime = [true; 256];
+    prime[0] = false;
+    prime[1] = false;
+
+    program.extend_from_slice(&[0x3e, 0x01]);
+    for n in 0..=255 {
+        push_ld_abs_a(&mut program, 0x2000 + n);
+    }
+
+    program.push(0xaf);
+    push_ld_abs_a(&mut program, 0x2000);
+    push_ld_abs_a(&mut program, 0x2001);
+
+    for p in 2..=15 {
+        if prime[p] {
+            for multiple in ((p * p)..=255).step_by(p) {
+                prime[multiple] = false;
+                push_ld_abs_a(&mut program, 0x2000 + multiple as u16);
+            }
+        }
+    }
+
+    program.push(0x76);
+    program
+}
+
+fn bench_sieve() {
+    let program = build_sieve_program();
+    let iterations = 500;
+
+    let mut reference_bus = BenchBus::new();
+    reference_bus.mem[..program.len()].copy_from_slice(&program);
+    let reference = measure_reference_program(Cpu::new_z80(), reference_bus, iterations);
+
+    let mut fast_bus = BenchBus::new();
+    fast_bus.mem[..program.len()].copy_from_slice(&program);
+    let fast = measure_fast_program(Cpu::new_z80(), fast_bus, iterations);
+
+    print_row("Eratosthenes sieve", reference, fast);
+}
+
 fn bench_save_load() {
     let mut cpu = Cpu::new_ez80();
     cpu.set_adl(true);
@@ -270,6 +364,7 @@ fn main() {
         indexed_config,
         &[0xdd, 0x7e, 0x01, 0xfd, 0x77, 0x01],
     );
+    bench_sieve();
     bench_save_load();
     bench_run_cycles();
 }

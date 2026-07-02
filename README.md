@@ -19,6 +19,24 @@ To run the EX8080 test suite for Intel 8080:
 cargo test --release -- --nocapture --ignored --test ex8080
 ```
 
+To run the raxoft Z80 test binaries on both the standard and static fast paths:
+
+```shell
+cargo test --test z80test -- --ignored --nocapture
+```
+
+To run the CPU fast-path benchmarks:
+
+```shell
+cargo bench --bench cpu_fast_path
+```
+
+To build the Dhrystone Z80 benchmark when SDCC is installed:
+
+```shell
+scripts/bench_dhrystone.sh
+```
+
 
 To run Tiny Basic (from [cpuville](http://cpuville.com/Kits/Z80-kits-home.html)):
 
@@ -67,6 +85,7 @@ fn main() {
 
 - The ZEXALL test suite for Z80 was taken from https://github.com/anotherlin/z80emu
 - The EX8080 test suite for Intel 8080 was taken from https://github.com/begoon/i8080-core
+- The raxoft Z80 tests were taken from https://github.com/raxoft/z80test
 
 ## Test results:
 
@@ -208,5 +227,45 @@ Note that some of the Zexall tests takes very long and is disabled for continuou
 ```
 cargo test --release -- --nocapture --ignored --test zexall
 
+```
+
+### Current local verification
+
+Run on 2026-07-02:
+
+```text
+cargo test
+result: ok
+
+cargo test --test z80test -- --ignored --nocapture
+result: ok, 12 passed
+standard path: z80doc, z80docflags, z80flags, z80full, z80ccf, z80memptr
+fast path: z80doc_fast, z80docflags_fast, z80flags_fast, z80full_fast, z80ccf_fast, z80memptr_fast
+```
+
+### Fast-path benchmarks
+
+Run on 2026-07-02 with `cargo bench --bench cpu_fast_path`:
+
+```text
+benchmark                     ref ips     fast ips      ref cps     fast cps   speedup
+-----------------------------------------------------------------------------------------
+NOP loop                    221004243    302626801    221004243    302626801     1.37x
+register ALU loop           131704180    143656291    131704180    143656291     1.09x
+memory read/write           156112434    201991062    312220105    403975959     1.29x
+branch loop                 151911041    171162536    455733123    513487608     1.13x
+ADL load/store              109445558    184296963    547227789    921484814     1.68x
+IX/IY indexed               100022894    136959248    400075549    547815047     1.37x
+Eratosthenes sieve          126252505    164796838    503228680    656862175     1.31x
+save/load state                     -            -            -            -     2.7ns
+run_cycles loop                     -    303177298            -    303177298        -
+```
+
+### Dhrystone
+
+`scripts/bench_dhrystone.sh` builds Dhrystone 2.1 for Z80 with SDCC and writes artifacts under `target/dhrystone-z80` by default. No Dhrystone binary is committed yet because SDCC was not installed in the verification environment:
+
+```text
+sdcc was not found. Install SDCC, then rerun this script.
 ```
 
