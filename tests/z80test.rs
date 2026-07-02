@@ -51,6 +51,35 @@ impl Machine for RaxoftMachine {
     }
 }
 
+impl FastBus for RaxoftMachine {
+    fn read8(&mut self, addr: u32) -> u8 {
+        self.mem[addr as usize]
+    }
+
+    fn write8(&mut self, addr: u32, value: u8) {
+        self.mem[addr as usize] = value;
+    }
+
+    fn input8(&mut self, port: u16) -> u8 {
+        self.input[port as usize]
+    }
+
+    fn output8(&mut self, port: u16, value: u8) {
+        self.output[port as usize] = value;
+    }
+
+    fn add_cycles(&mut self, cycles: u32) {
+        self.elapsed_cycles
+            .set(self.elapsed_cycles.get().wrapping_add(cycles as i64));
+    }
+}
+
+#[derive(Clone, Copy)]
+enum TestPath {
+    Standard,
+    Fast,
+}
+
 struct Z80TestCase {
     name: &'static str,
     code: &'static [u8],
@@ -65,8 +94,11 @@ static Z80FULL: &[u8] = include_bytes!("res/z80full.out");
 static Z80CCF: &[u8] = include_bytes!("res/z80ccf.out");
 static Z80MEMPTR: &[u8] = include_bytes!("res/z80memptr.out");
 
-fn run_z80test(case: Z80TestCase) {
-    let mut cpu = Cpu::new_z80();
+fn run_z80test(case: Z80TestCase, path: TestPath) {
+    let mut cpu = match path {
+        TestPath::Standard => Cpu::new_z80(),
+        TestPath::Fast => Cpu::new_z80(),
+    };
     let mut machine = RaxoftMachine::new();
 
     for (i, byte) in case.code.iter().enumerate() {
@@ -79,7 +111,10 @@ fn run_z80test(case: Z80TestCase) {
     cpu.state.set_pc(START as u32);
     let mut msg = String::new();
     loop {
-        cpu.execute_instruction(&mut machine);
+        match path {
+            TestPath::Standard => cpu.execute_instruction(&mut machine),
+            TestPath::Fast => cpu.step_fast(&mut machine),
+        }
 
         if cpu.state.pc() == 0x0000 {
             break;
@@ -100,8 +135,12 @@ fn run_z80test(case: Z80TestCase) {
     assert_eq!(
         (case.expected_failures, case.expected_total),
         (failures, total),
-        "{}\n{}",
+        "{} {}\n{}",
         case.name,
+        match path {
+            TestPath::Standard => "standard",
+            TestPath::Fast => "fast",
+        },
         msg
     );
 }
@@ -130,65 +169,167 @@ fn parse_result(msg: &str) -> (usize, usize) {
 #[test]
 #[ignore]
 fn z80doc() {
-    run_z80test(Z80TestCase {
-        name: "z80doc",
-        code: Z80DOC,
-        expected_failures: 0,
-        expected_total: 0,
-    });
+    run_z80test(
+        Z80TestCase {
+            name: "z80doc",
+            code: Z80DOC,
+            expected_failures: 0,
+            expected_total: 0,
+        },
+        TestPath::Standard,
+    );
 }
 
 #[test]
 #[ignore]
 fn z80docflags() {
-    run_z80test(Z80TestCase {
-        name: "z80docflags",
-        code: Z80DOCFLAGS,
-        expected_failures: 0,
-        expected_total: 0,
-    });
+    run_z80test(
+        Z80TestCase {
+            name: "z80docflags",
+            code: Z80DOCFLAGS,
+            expected_failures: 0,
+            expected_total: 0,
+        },
+        TestPath::Standard,
+    );
 }
 
 #[test]
 #[ignore]
 fn z80flags() {
-    run_z80test(Z80TestCase {
-        name: "z80flags",
-        code: Z80FLAGS,
-        expected_failures: 0,
-        expected_total: 0,
-    });
+    run_z80test(
+        Z80TestCase {
+            name: "z80flags",
+            code: Z80FLAGS,
+            expected_failures: 0,
+            expected_total: 0,
+        },
+        TestPath::Standard,
+    );
 }
 
 #[test]
 #[ignore]
 fn z80full() {
-    run_z80test(Z80TestCase {
-        name: "z80full",
-        code: Z80FULL,
-        expected_failures: 0,
-        expected_total: 0,
-    });
+    run_z80test(
+        Z80TestCase {
+            name: "z80full",
+            code: Z80FULL,
+            expected_failures: 0,
+            expected_total: 0,
+        },
+        TestPath::Standard,
+    );
 }
 
 #[test]
 #[ignore]
 fn z80ccf() {
-    run_z80test(Z80TestCase {
-        name: "z80ccf",
-        code: Z80CCF,
-        expected_failures: 0,
-        expected_total: 0,
-    });
+    run_z80test(
+        Z80TestCase {
+            name: "z80ccf",
+            code: Z80CCF,
+            expected_failures: 0,
+            expected_total: 0,
+        },
+        TestPath::Standard,
+    );
 }
 
 #[test]
 #[ignore]
 fn z80memptr() {
-    run_z80test(Z80TestCase {
-        name: "z80memptr",
-        code: Z80MEMPTR,
-        expected_failures: 0,
-        expected_total: 0,
-    });
+    run_z80test(
+        Z80TestCase {
+            name: "z80memptr",
+            code: Z80MEMPTR,
+            expected_failures: 0,
+            expected_total: 0,
+        },
+        TestPath::Standard,
+    );
+}
+
+#[test]
+#[ignore]
+fn z80doc_fast() {
+    run_z80test(
+        Z80TestCase {
+            name: "z80doc",
+            code: Z80DOC,
+            expected_failures: 0,
+            expected_total: 0,
+        },
+        TestPath::Fast,
+    );
+}
+
+#[test]
+#[ignore]
+fn z80docflags_fast() {
+    run_z80test(
+        Z80TestCase {
+            name: "z80docflags",
+            code: Z80DOCFLAGS,
+            expected_failures: 0,
+            expected_total: 0,
+        },
+        TestPath::Fast,
+    );
+}
+
+#[test]
+#[ignore]
+fn z80flags_fast() {
+    run_z80test(
+        Z80TestCase {
+            name: "z80flags",
+            code: Z80FLAGS,
+            expected_failures: 0,
+            expected_total: 0,
+        },
+        TestPath::Fast,
+    );
+}
+
+#[test]
+#[ignore]
+fn z80full_fast() {
+    run_z80test(
+        Z80TestCase {
+            name: "z80full",
+            code: Z80FULL,
+            expected_failures: 0,
+            expected_total: 0,
+        },
+        TestPath::Fast,
+    );
+}
+
+#[test]
+#[ignore]
+fn z80ccf_fast() {
+    run_z80test(
+        Z80TestCase {
+            name: "z80ccf",
+            code: Z80CCF,
+            expected_failures: 0,
+            expected_total: 0,
+        },
+        TestPath::Fast,
+    );
+}
+
+#[test]
+#[ignore]
+fn z80memptr_fast() {
+    run_z80test(
+        Z80TestCase {
+            name: "z80memptr",
+            code: Z80MEMPTR,
+            expected_failures: 0,
+            expected_total: 0,
+        },
+        TestPath::Fast,
+    );
 }

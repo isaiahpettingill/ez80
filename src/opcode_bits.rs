@@ -237,6 +237,7 @@ pub fn build_rxd(dir: ShiftDir, name: &str) -> Opcode {
         name: name.to_string(),
         action: Box::new(move |env: &mut Environment| {
             let mut a = env.state.reg.a();
+            let address = env.state.reg.get16(Reg16::HL);
             let mut phl = env.reg8_ext(Reg8::_HL);
             // a = 0xWX, phl = 0xYZ
             match dir {
@@ -255,6 +256,7 @@ pub fn build_rxd(dir: ShiftDir, name: &str) -> Opcode {
             }
             env.state.reg.set_a(a);
             env.set_reg(Reg8::_HL, phl);
+            env.state.reg.set_memptr(address.wrapping_add(1));
 
             env.state.reg.update_bits_in_flags(a);
         }),

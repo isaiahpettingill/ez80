@@ -47,6 +47,7 @@ pub fn build_jr_eq((flag, value, name): (Flag, bool, &str)) -> Opcode {
 fn relative_jump(env: &mut Environment, offset: u8) {
     let mut pc = env.state.pc();
     pc = env.wrap_address(pc, offset as i8 as i32);
+    env.state.reg.set_memptr(pc as u16);
     env.state.set_pc(pc);
 }
 
@@ -79,6 +80,7 @@ pub fn build_jp_unconditional() -> Opcode {
         name: "JP nn".to_string(),
         action: Box::new(move |env: &mut Environment| {
             let address = env.advance_immediate_16mbase_or_24();
+            env.state.reg.set_memptr(address as u16);
             env.sys.use_cycles(1);
             if handle_jump_adl_state(env) {
                 env.state.set_pc(address);
@@ -92,6 +94,7 @@ pub fn build_jp_eq((flag, value, name): (Flag, bool, &str)) -> Opcode {
         name: format!("JP {}, nn", name),
         action: Box::new(move |env: &mut Environment| {
             let address = env.advance_immediate_16mbase_or_24();
+            env.state.reg.set_memptr(address as u16);
             if env.state.reg.get_flag(flag) == value {
                 env.sys.use_cycles(1);
                 env.state.set_pc(address);
@@ -172,6 +175,7 @@ pub fn build_call() -> Opcode {
         name: "CALL nn".to_string(),
         action: Box::new(move |env: &mut Environment| {
             let address = env.advance_immediate16or24();
+            env.state.reg.set_memptr(address as u16);
             handle_call_size_prefix(env);
             env.state.set_pc(address);
         }),
@@ -183,6 +187,7 @@ pub fn build_call_eq((flag, value, name): (Flag, bool, &str)) -> Opcode {
         name: format!("CALL {}, nn", name),
         action: Box::new(move |env: &mut Environment| {
             let address = env.advance_immediate_16mbase_or_24();
+            env.state.reg.set_memptr(address as u16);
             if env.state.reg.get_flag(flag) == value {
                 handle_call_size_prefix(env);
                 env.state.set_pc(address);
@@ -193,6 +198,7 @@ pub fn build_call_eq((flag, value, name): (Flag, bool, &str)) -> Opcode {
 
 fn handle_rst_size_prefix(env: &mut Environment, vec: u32) {
     let pc = env.state.pc();
+    env.state.reg.set_memptr(vec as u16);
 
     if env.state.reg.adl {
         match env.state.sz_prefix {

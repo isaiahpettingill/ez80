@@ -235,6 +235,7 @@ impl<'a> Environment<'_> {
             match self.state.sz_prefix {
                 SizePrefix::None => {
                     let pc = self.pop();
+                    self.state.reg.set_memptr(pc as u16);
                     self.state.set_pc(pc);
                 }
                 // according to spec only LIL is valid here, but LIS does work too
@@ -242,10 +243,12 @@ impl<'a> Environment<'_> {
                     let adl_flag = self.pop_byte_spl();
                     if adl_flag & 1 == 1 {
                         let address = self.pop();
+                        self.state.reg.set_memptr(address as u16);
                         self.state.set_pc(address);
                     } else {
                         let mut address = self.pop_byte_spl() as u32;
                         address += (self.pop_byte_spl() as u32) << 8;
+                        self.state.reg.set_memptr(address as u16);
                         self.state.set_pc(address);
                         self.state.reg.adl = false;
                     }
@@ -257,6 +260,7 @@ impl<'a> Environment<'_> {
                         self.state.pc()
                     );
                     let pc = self.pop();
+                    self.state.reg.set_memptr(pc as u16);
                     self.state.set_pc(pc);
                 }
             }
@@ -264,6 +268,7 @@ impl<'a> Environment<'_> {
             match self.state.sz_prefix {
                 SizePrefix::None => {
                     let pc = self.pop();
+                    self.state.reg.set_memptr(pc as u16);
                     self.state.set_pc(pc);
                 }
                 // according to spec, only LIS is valid here
@@ -275,11 +280,13 @@ impl<'a> Environment<'_> {
                         address += self.pop_byte_sps() as u32;
                         address += (self.pop_byte_sps() as u32) << 8;
                         self.state.reg.adl = true;
+                        self.state.reg.set_memptr(address as u16);
                         self.state.set_pc(address);
                     } else {
                         let mut address = self.pop_byte_sps() as u32;
                         address += (self.pop_byte_sps() as u32) << 8;
                         self.state.reg.adl = false;
+                        self.state.reg.set_memptr(address as u16);
                         self.state.set_pc(address);
                     }
                 }
@@ -290,6 +297,7 @@ impl<'a> Environment<'_> {
                         self.state.pc()
                     );
                     let pc = self.pop();
+                    self.state.reg.set_memptr(pc as u16);
                     self.state.set_pc(pc);
                 }
             }
@@ -330,6 +338,7 @@ impl<'a> Environment<'_> {
         byte or not.
         */
         self.state.displacement = self.advance_pc() as i8;
+        self.state.reg.set_memptr(self.index_address() as u16);
     }
 
     pub fn index_value(&self) -> u32 {

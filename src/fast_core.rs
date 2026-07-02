@@ -40,6 +40,12 @@ const ROT: [(ShiftDir, ShiftMode); 8] = [
 ];
 const BLI_A: [(bool, bool); 4] = [(true, false), (false, false), (true, true), (false, true)];
 
+#[derive(Copy, Clone, PartialEq, Eq)]
+enum CoreMode {
+    Z80,
+    EZ80,
+}
+
 #[derive(Copy, Clone)]
 struct Parts {
     x: usize,
@@ -65,6 +71,23 @@ pub(crate) fn step_ez80_fast<B: FastBus>(
     state: &mut super::state::State,
     cycles: &mut u64,
     bus: &mut B,
+) {
+    step_fast(state, cycles, bus, CoreMode::EZ80);
+}
+
+pub(crate) fn step_z80_fast<B: FastBus>(
+    state: &mut super::state::State,
+    cycles: &mut u64,
+    bus: &mut B,
+) {
+    step_fast(state, cycles, bus, CoreMode::Z80);
+}
+
+fn step_fast<B: FastBus>(
+    state: &mut super::state::State,
+    cycles: &mut u64,
+    bus: &mut B,
+    mode: CoreMode,
 ) {
     if state.halted && !state.nmi_pending && !state.reset_pending {
         return;
@@ -95,27 +118,31 @@ pub(crate) fn step_ez80_fast<B: FastBus>(
     }
 
     env.state.reg.begin_instruction_flags();
-    execute_prefixed(&mut env);
+    execute_prefixed(&mut env, mode);
     env.state.reg.finish_instruction_flags();
     env.clear_index();
     env.state.clear_sz_prefix();
     env.state.instructions_executed += 1;
-    let r = env.state.reg.get8(Reg8::R).wrapping_add(1);
-    env.state.reg.set8(Reg8::R, r);
+    let r = env.state.reg.get8(Reg8::R);
+    env.state
+        .reg
+        .set8(Reg8::R, (r & 0x80) | r.wrapping_add(1) & 0x7f);
     env.finish();
 }
 
-fn execute_prefixed<B: FastBus>(env: &mut FastEnv<B>) {
+fn execute_prefixed<B: FastBus>(env: &mut FastEnv<B>, mode: CoreMode) {
     let mut b0 = env.advance_pc();
-    loop {
-        match b0 {
-            0x40 => env.state.sz_prefix = SizePrefix::SIS,
-            0x49 => env.state.sz_prefix = SizePrefix::LIS,
-            0x52 => env.state.sz_prefix = SizePrefix::SIL,
-            0x5b => env.state.sz_prefix = SizePrefix::LIL,
-            _ => break,
+    if mode == CoreMode::EZ80 {
+        loop {
+            match b0 {
+                0x40 => env.state.sz_prefix = SizePrefix::SIS,
+                0x49 => env.state.sz_prefix = SizePrefix::LIS,
+                0x52 => env.state.sz_prefix = SizePrefix::SIL,
+                0x5b => env.state.sz_prefix = SizePrefix::LIL,
+                _ => break,
+            }
+            b0 = env.advance_pc();
         }
-        b0 = env.advance_pc();
     }
     loop {
         match b0 {
@@ -140,11 +167,11 @@ fn execute_prefixed<B: FastBus>(env: &mut FastEnv<B>) {
         0xed => {
             env.clear_index();
             let op = env.advance_pc();
-            execute_ed(env, op);
+            execute_ed(env, op, mode);
         }
         0x0f | 0x1f | 0x2f | 0x07 | 0x17 | 0x27 | 0x31 | 0x37 | 0x3e | 0x3f | 0x86 | 0x96
         | 0xa6 | 0xb6 | 0x8e | 0x9e | 0xae | 0xbe
-            if env.is_alt_index() =>
+            if mode == CoreMode::EZ80 && env.is_alt_index() =>
         {
             let index = env.get_index();
             env.clear_index();
@@ -303,7 +330,7 @@ fn execute_cb_indexed<B: FastBus>(env: &mut FastEnv<B>, op: u8) {
     let p = Parts::new(op);
     match p.x {
         0 => op_rot_r(env, R[p.z], ROT[p.y], false, true),
-        1 => op_bit_r(env, p.y as u8, R[p.z]),
+        1 => op_bit_r(env, p.y as u8, Reg8::_HL),
         2 => op_indexed_set_res_r(env, p.y as u8, R[p.z], false),
         3 => op_indexed_set_res_r(env, p.y as u8, R[p.z], true),
         _ => unreachable!(),
@@ -350,14 +377,14 @@ fn execute_dd_fd<B: FastBus>(env: &mut FastEnv<B>, index: Reg16, op: u8) {
     }
 }
 
-fn execute_ed<B: FastBus>(env: &mut FastEnv<B>, op: u8) {
+fn execute_ed<B: FastBus>(env: &mut FastEnv<B>, op: u8, mode: CoreMode) {
     if op == 0xfe {
         env.trap_illegal_instruction();
         return;
     }
     let p = Parts::new(op);
     match p.x {
-        0 => match p.z {
+        0 if mode == CoreMode::EZ80 => match p.z {
             0 => match p.y {
                 0 | 1 | 2 | 3 | 4 | 5 | 7 => op_in0_r_n(env, R[p.y]),
                 _ => {}
@@ -391,6 +418,7 @@ fn execute_ed<B: FastBus>(env: &mut FastEnv<B>, op: u8) {
             },
             _ => {}
         },
+        0 => {}
         1 => match p.z {
             0 => match p.y {
                 6 => op_in_0_c(env),
@@ -410,26 +438,32 @@ fn execute_ed<B: FastBus>(env: &mut FastEnv<B>, op: u8) {
                 1 => op_ld_rr_pnn(env, RP[p.p]),
                 _ => unreachable!(),
             },
-            4 => match p.y {
-                1 | 3 | 5 | 7 => op_mlt_rr(env, RP[p.p]),
-                2 => op_lea_rr_ind_offset(env, Reg16::IX, Reg16::IY),
-                4 => op_tst_a_n(env),
-                6 => op_tstio_n(env),
-                _ => op_neg(env),
-            },
+            4 => {
+                if mode == CoreMode::EZ80 {
+                    match p.y {
+                        1 | 3 | 5 | 7 => op_mlt_rr(env, RP[p.p]),
+                        2 => op_lea_rr_ind_offset(env, Reg16::IX, Reg16::IY),
+                        4 => op_tst_a_n(env),
+                        6 => op_tstio_n(env),
+                        _ => op_neg(env),
+                    }
+                } else {
+                    op_neg(env);
+                }
+            }
             5 => match p.y {
                 1 => op_reti(env),
-                2 => op_lea_rr_ind_offset(env, Reg16::IY, Reg16::IX),
-                4 => op_pea(env, Reg16::IX),
-                5 => env.state.reg.mbase = env.state.reg.get8(Reg8::A),
-                7 => env.state.reg.madl = true,
+                2 if mode == CoreMode::EZ80 => op_lea_rr_ind_offset(env, Reg16::IY, Reg16::IX),
+                4 if mode == CoreMode::EZ80 => op_pea(env, Reg16::IX),
+                5 if mode == CoreMode::EZ80 => env.state.reg.mbase = env.state.reg.get8(Reg8::A),
+                7 if mode == CoreMode::EZ80 => env.state.reg.madl = true,
                 _ => op_retn(env),
             },
             6 => match p.y {
-                4 => op_pea(env, Reg16::IY),
-                5 => env.state.reg.set8(Reg8::A, env.state.reg.mbase),
-                6 => env.state.halted = true,
-                7 => env.state.reg.madl = false,
+                4 if mode == CoreMode::EZ80 => op_pea(env, Reg16::IY),
+                5 if mode == CoreMode::EZ80 => env.state.reg.set8(Reg8::A, env.state.reg.mbase),
+                6 if mode == CoreMode::EZ80 => env.state.halted = true,
+                7 if mode == CoreMode::EZ80 => env.state.reg.madl = false,
                 _ => env.state.reg.set_interrupt_mode(IM[p.y]),
             },
             7 => match p.y {
@@ -453,7 +487,7 @@ fn execute_ed<B: FastBus>(env: &mut FastEnv<B>, op: u8) {
                     3 => op_out_block(env, BLI_A[p.y - 4]),
                     _ => unreachable!(),
                 }
-            } else if p.z == 3 {
+            } else if mode == CoreMode::EZ80 && p.z == 3 {
                 match p.y {
                     0 => op_otim_otdm(env, true, false),
                     1 => op_otim_otdm(env, false, false),
@@ -461,7 +495,7 @@ fn execute_ed<B: FastBus>(env: &mut FastEnv<B>, op: u8) {
                     3 => op_otim_otdm(env, false, true),
                     _ => {}
                 }
-            } else if p.z == 4 {
+            } else if mode == CoreMode::EZ80 && p.z == 4 {
                 match p.y {
                     0 => op_in_block2(env, true, false),
                     1 => op_in_block2(env, false, false),
@@ -475,7 +509,7 @@ fn execute_ed<B: FastBus>(env: &mut FastEnv<B>, op: u8) {
                 }
             }
         }
-        3 => match p.z {
+        3 if mode == CoreMode::EZ80 => match p.z {
             2 => match p.y {
                 0 => op_inirx_or_indrx(env, true),
                 1 => op_inirx_or_indrx(env, false),
@@ -496,6 +530,7 @@ fn execute_ed<B: FastBus>(env: &mut FastEnv<B>, op: u8) {
             },
             _ => {}
         },
+        3 => {}
         _ => unreachable!(),
     }
 }
@@ -724,17 +759,23 @@ fn op_ld_rr_nn<B: FastBus>(env: &mut FastEnv<B>, rr: Reg16) {
 fn op_ld_a_prr<B: FastBus>(env: &mut FastEnv<B>, rr: Reg16) {
     let address = env.reg16mbase_or_24(rr);
     let value = env.read8(address);
+    env.state.reg.set_memptr((address as u16).wrapping_add(1));
     env.state.reg.set_a(value);
 }
 
 fn op_ld_prr_a<B: FastBus>(env: &mut FastEnv<B>, rr: Reg16) {
     let address = env.reg16mbase_or_24(rr);
-    env.write8(address, env.state.reg.a());
+    let value = env.state.reg.a();
+    env.write8(address, value);
+    env.state
+        .reg
+        .set_memptr(((value as u16) << 8) | (address as u8).wrapping_add(1) as u16);
 }
 
 fn op_ld_a_pnn<B: FastBus>(env: &mut FastEnv<B>) {
     let address = env.advance_immediate_16mbase_or_24();
     let value = env.read8(address);
+    env.state.reg.set_memptr((address as u16).wrapping_add(1));
     env.state.reg.set_a(value);
 }
 
@@ -742,6 +783,9 @@ fn op_ld_pnn_a<B: FastBus>(env: &mut FastEnv<B>) {
     let value = env.state.reg.a();
     let address = env.advance_immediate_16mbase_or_24();
     env.write8(address, value);
+    env.state
+        .reg
+        .set_memptr(((value as u16) << 8) | (address as u8).wrapping_add(1) as u16);
 }
 
 fn op_ld_pnn_rr<B: FastBus>(env: &mut FastEnv<B>, rr: Reg16) {
@@ -752,6 +796,7 @@ fn op_ld_pnn_rr<B: FastBus>(env: &mut FastEnv<B>, rr: Reg16) {
     } else {
         env.write16(address, value as u16);
     }
+    env.state.reg.set_memptr((address as u16).wrapping_add(1));
 }
 
 fn op_ld_rr_pnn<B: FastBus>(env: &mut FastEnv<B>, rr: Reg16) {
@@ -763,6 +808,7 @@ fn op_ld_rr_pnn<B: FastBus>(env: &mut FastEnv<B>, rr: Reg16) {
         let value = env.read16(address);
         env.set_reg16(rr, value);
     }
+    env.state.reg.set_memptr((address as u16).wrapping_add(1));
 }
 
 fn op_ld_sp_hl<B: FastBus>(env: &mut FastEnv<B>) {
@@ -1036,6 +1082,7 @@ fn op_indexed_set_res_r<B: FastBus>(env: &mut FastEnv<B>, bit: u8, reg: Reg8, se
 
 fn op_rxd<B: FastBus>(env: &mut FastEnv<B>, dir: ShiftDir) {
     let mut a = env.state.reg.a();
+    let address = env.state.reg.get16(Reg16::HL);
     let mut phl = env.reg8_ext(Reg8::_HL);
     match dir {
         ShiftDir::Left => {
@@ -1051,11 +1098,13 @@ fn op_rxd<B: FastBus>(env: &mut FastEnv<B>, dir: ShiftDir) {
     }
     env.state.reg.set_a(a);
     env.set_reg(Reg8::_HL, phl);
+    env.state.reg.set_memptr(address.wrapping_add(1));
     env.state.reg.update_bits_in_flags(a);
 }
 
 fn relative_jump<B: FastBus>(env: &mut FastEnv<B>, offset: u8) {
     let pc = env.wrap_address(env.state.pc(), offset as i8 as i32);
+    env.state.reg.set_memptr(pc as u16);
     env.state.set_pc(pc);
 }
 
@@ -1108,6 +1157,7 @@ fn op_jr_cc<B: FastBus>(env: &mut FastEnv<B>, (flag, value): (Flag, bool)) {
 
 fn op_jp<B: FastBus>(env: &mut FastEnv<B>) {
     let address = env.advance_immediate_16mbase_or_24();
+    env.state.reg.set_memptr(address as u16);
     env.use_cycles(1);
     if handle_jump_adl_state(env) {
         env.state.set_pc(address);
@@ -1116,6 +1166,7 @@ fn op_jp<B: FastBus>(env: &mut FastEnv<B>) {
 
 fn op_jp_cc<B: FastBus>(env: &mut FastEnv<B>, (flag, value): (Flag, bool)) {
     let address = env.advance_immediate_16mbase_or_24();
+    env.state.reg.set_memptr(address as u16);
     if env.state.reg.get_flag(flag) == value {
         env.use_cycles(1);
         env.state.set_pc(address);
@@ -1175,12 +1226,14 @@ fn handle_call_size_prefix<B: FastBus>(env: &mut FastEnv<B>) {
 
 fn op_call<B: FastBus>(env: &mut FastEnv<B>) {
     let address = env.advance_immediate16or24();
+    env.state.reg.set_memptr(address as u16);
     handle_call_size_prefix(env);
     env.state.set_pc(address);
 }
 
 fn op_call_cc<B: FastBus>(env: &mut FastEnv<B>, (flag, value): (Flag, bool)) {
     let address = env.advance_immediate_16mbase_or_24();
+    env.state.reg.set_memptr(address as u16);
     if env.state.reg.get_flag(flag) == value {
         handle_call_size_prefix(env);
         env.state.set_pc(address);
@@ -1189,6 +1242,7 @@ fn op_call_cc<B: FastBus>(env: &mut FastEnv<B>, (flag, value): (Flag, bool)) {
 
 fn handle_rst_size_prefix<B: FastBus>(env: &mut FastEnv<B>, vec: u32) {
     let pc = env.state.pc();
+    env.state.reg.set_memptr(vec as u16);
     if env.state.reg.adl {
         match env.state.sz_prefix {
             SizePrefix::None => {
@@ -1301,10 +1355,12 @@ fn op_ex_psp_hl<B: FastBus>(env: &mut FastEnv<B>) {
     let temp = env.reg16or24_ext(Reg16::HL);
     if env.state.is_op_long() {
         let value = env.read24(address);
+        env.state.reg.set_memptr(value as u16);
         env.set_reg24(Reg16::HL, value);
         env.write24(address, temp);
     } else {
         let value = env.read16(address);
+        env.state.reg.set_memptr(value);
         env.set_reg16_preserve_17_to_24(Reg16::HL, value);
         env.write16(address, temp as u16);
     }
@@ -1356,17 +1412,23 @@ fn op_out_c_r<B: FastBus>(env: &mut FastEnv<B>, reg: Reg8) {
     let address = env.state.reg.get16(Reg16::BC);
     let value = env.state.reg.get8(reg);
     env.output8(address, value);
+    env.state.reg.set_memptr(address.wrapping_add(1));
 }
 
 fn op_out_c_0<B: FastBus>(env: &mut FastEnv<B>) {
     let address = env.state.reg.get16(Reg16::BC);
     env.output8(address, 0);
+    env.state.reg.set_memptr(address.wrapping_add(1));
 }
 
 fn op_out_n_a<B: FastBus>(env: &mut FastEnv<B>) {
     let a = env.state.reg.a();
-    let address = ((a as u16) << 8) + env.advance_pc() as u16;
+    let port = env.advance_pc();
+    let address = ((a as u16) << 8) + port as u16;
     env.output8(address, a);
+    env.state
+        .reg
+        .set_memptr(((a as u16) << 8) | port.wrapping_add(1) as u16);
 }
 
 fn op_out0_n_r<B: FastBus>(env: &mut FastEnv<B>, reg: Reg8) {
@@ -1388,12 +1450,14 @@ fn op_in_r_c<B: FastBus>(env: &mut FastEnv<B>, reg: Reg8) {
     let address = env.state.reg.get16(Reg16::BC);
     let value = env.input8(address);
     env.state.reg.set8(reg, value);
+    env.state.reg.set_memptr(address.wrapping_add(1));
     env.state.reg.update_bits_in_flags(value);
 }
 
 fn op_in_0_c<B: FastBus>(env: &mut FastEnv<B>) {
     let address = env.state.reg.get16(Reg16::BC);
     let value = env.input8(address);
+    env.state.reg.set_memptr(address.wrapping_add(1));
     env.state.reg.update_bits_in_flags(value);
 }
 
@@ -1401,6 +1465,7 @@ fn op_in_a_n<B: FastBus>(env: &mut FastEnv<B>) {
     let a = env.state.reg.a();
     let address = ((a as u16) << 8) + env.advance_pc() as u16;
     let value = env.input8(address);
+    env.state.reg.set_memptr(address.wrapping_add(1));
     env.state.reg.set_a(value);
 }
 
@@ -1423,6 +1488,7 @@ fn repeat_ed_instruction<B: FastBus>(env: &mut FastEnv<B>, counter: u32) {
         };
         let pc = env.wrap_address(env.state.pc(), -instruction_len);
         env.state.set_pc(pc);
+        env.state.reg.set_memptr((pc as u16).wrapping_add(1));
     }
 }
 
@@ -1526,8 +1592,14 @@ fn op_in_block<B: FastBus>(env: &mut FastEnv<B>, (inc, repeat): (bool, bool)) {
 fn op_out_block<B: FastBus>(env: &mut FastEnv<B>, (inc, repeat): (bool, bool)) {
     let address = env.state.reg.get16(Reg16::BC);
     let b = env.state.reg.inc_dec8(Reg8::B, false);
+    let memptr = env
+        .state
+        .reg
+        .get16(Reg16::BC)
+        .wrapping_add(if inc { 1 } else { 0xffff });
     let value = env.reg8_ext(Reg8::_HL);
     env.output8(address, value);
+    env.state.reg.set_memptr(memptr);
     inc_dec16or24(env, Reg16::HL, inc);
     let k = value as u16 + env.state.reg.get8(Reg8::L) as u16;
     env.state.reg.update_block_flags(value, k, b);
@@ -1596,6 +1668,7 @@ fn op_ld_block<B: FastBus>(env: &mut FastEnv<B>, (inc, repeat): (bool, bool)) {
         };
         let pc = env.wrap_address(env.state.pc(), -instruction_len);
         env.state.set_pc(pc);
+        env.state.reg.set_memptr((pc as u16).wrapping_add(1));
         env.use_cycles(-2);
         if !matches!(env.state.sz_prefix, SizePrefix::None) {
             env.use_cycles(-1);
@@ -1608,6 +1681,11 @@ fn op_cp_block<B: FastBus>(env: &mut FastEnv<B>, (inc, repeat): (bool, bool)) {
     let b = env.reg8_ext(Reg8::_HL);
     let c_bak = env.state.reg.get_flag(Flag::C);
     op_cp(env, a, b);
+    let memptr = env
+        .state
+        .reg
+        .memptr
+        .wrapping_add(if inc { 1 } else { 0xffff });
     let bc = if env.state.is_op_long() {
         env.state.reg.inc_dec24(Reg16::HL, inc);
         env.state.reg.inc_dec24(Reg16::BC, false)
@@ -1623,9 +1701,11 @@ fn op_cp_block<B: FastBus>(env: &mut FastEnv<B>, (inc, repeat): (bool, bool)) {
     env.state.reg.set_flag(Flag::N);
     env.state.reg.put_flag(Flag::P, bc != 0);
     env.state.reg.put_flag(Flag::C, c_bak);
+    env.state.reg.set_memptr(memptr);
     if repeat && bc != 0 && a != b {
         let pc = env.wrap_address(env.state.pc(), -2);
         env.state.set_pc(pc);
+        env.state.reg.set_memptr((pc as u16).wrapping_add(1));
     }
 }
 

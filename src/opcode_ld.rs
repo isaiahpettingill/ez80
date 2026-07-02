@@ -159,6 +159,7 @@ pub fn build_ld_a_prr(rr: Reg16) -> Opcode {
         action: Box::new(move |env: &mut Environment| {
             let address = env.reg16mbase_or_24(rr);
             let value = env.peek(address);
+            env.state.reg.set_memptr((address as u16).wrapping_add(1));
             env.state.reg.set_a(value);
         }),
     }
@@ -170,6 +171,7 @@ pub fn build_ld_a_pnn() -> Opcode {
         action: Box::new(move |env: &mut Environment| {
             let address = env.advance_immediate_16mbase_or_24();
             let value = env.peek(address);
+            env.state.reg.set_memptr((address as u16).wrapping_add(1));
             env.state.reg.set_a(value);
         }),
     }
@@ -183,6 +185,9 @@ pub fn build_ld_prr_a(rr: Reg16) -> Opcode {
             let value = env.state.reg.a();
             let address = env.reg16mbase_or_24(rr);
             env.poke(address, value);
+            env.state
+                .reg
+                .set_memptr(((value as u16) << 8) | (address as u8).wrapping_add(1) as u16);
         }),
     }
 }
@@ -194,6 +199,9 @@ pub fn build_ld_pnn_a() -> Opcode {
             let value = env.state.reg.a();
             let address = env.advance_immediate_16mbase_or_24();
             env.poke(address, value);
+            env.state
+                .reg
+                .set_memptr(((value as u16) << 8) | (address as u8).wrapping_add(1) as u16);
         }),
     }
 }
@@ -234,6 +242,7 @@ pub fn build_ld_pnn_rr(rr: Reg16, _fast: bool) -> Opcode {
             } else {
                 env.poke16(address, value as u16);
             }
+            env.state.reg.set_memptr((address as u16).wrapping_add(1));
         }),
     }
 }
@@ -250,6 +259,7 @@ pub fn build_ld_rr_pnn(rr: Reg16, _fast: bool) -> Opcode {
                 let value = env.peek16(address);
                 env.set_reg16(rr, value);
             }
+            env.state.reg.set_memptr((address as u16).wrapping_add(1));
         }),
     }
 }
@@ -302,10 +312,14 @@ pub fn build_ex_psp_hl() -> Opcode {
             let address = env.state.sp();
             let temp = env.reg16or24_ext(Reg16::HL);
             if env.state.is_op_long() {
-                env.set_reg24(Reg16::HL, env.peek24(address));
+                let value = env.peek24(address);
+                env.state.reg.set_memptr(value as u16);
+                env.set_reg24(Reg16::HL, value);
                 env.poke24(address, temp);
             } else {
-                env.set_reg16_preserve_17_to_24(Reg16::HL, env.peek16(address));
+                let value = env.peek16(address);
+                env.state.reg.set_memptr(value);
+                env.set_reg16_preserve_17_to_24(Reg16::HL, value);
                 env.poke16(address, temp as u16);
             }
         }),
@@ -347,6 +361,7 @@ pub fn build_ld_block((inc, repeat, postfix): (bool, bool, &'static str)) -> Opc
                 };
                 let pc = env.wrap_address(env.state.pc(), -instruction_len);
                 env.state.set_pc(pc);
+                env.state.reg.set_memptr((pc as u16).wrapping_add(1));
                 // all but one repeat gets the 2-byte opcode cached
                 env.sys.use_cycles(-2);
                 // and the size prefix is cached if present

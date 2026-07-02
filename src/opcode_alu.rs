@@ -122,6 +122,11 @@ pub fn build_cp_block((inc, repeat, postfix): (bool, bool, &'static str)) -> Opc
             let b = env.reg8_ext(Reg8::_HL);
             let c_bak = env.state.reg.get_flag(Flag::C);
             operator_cp(env, a, b);
+            let memptr = env
+                .state
+                .reg
+                .memptr
+                .wrapping_add(if inc { 1 } else { 0xffff });
             let bc = if env.state.is_op_long() {
                 env.state.reg.inc_dec24(Reg16::HL, inc);
                 env.state.reg.inc_dec24(Reg16::BC, false /*decrement*/)
@@ -140,11 +145,13 @@ pub fn build_cp_block((inc, repeat, postfix): (bool, bool, &'static str)) -> Opc
             env.state.reg.put_flag(Flag::P, bc != 0);
             env.state.reg.put_flag(Flag::C, c_bak); // C unchanged
                                                     // S, Z and H set by operator_cp()
+            env.state.reg.set_memptr(memptr);
 
             if repeat && bc != 0 && a != b {
                 // Back to redo the instruction
                 let pc = env.wrap_address(env.state.pc(), -2);
                 env.state.set_pc(pc);
+                env.state.reg.set_memptr((pc as u16).wrapping_add(1));
             }
         }),
     }

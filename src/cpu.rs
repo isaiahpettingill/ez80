@@ -3,7 +3,7 @@ use super::decoder_ez80::*;
 use super::decoder_z80::*;
 use super::environment::*;
 use super::fast_bus::FastBus;
-use super::fast_core::step_ez80_fast;
+use super::fast_core::{step_ez80_fast, step_z80_fast};
 use super::machine::*;
 use super::opcode::*;
 use super::registers::*;
@@ -105,9 +105,10 @@ impl Cpu {
     /// Executes one instruction through the generic static-dispatch eZ80 fast path.
     pub fn step_fast<B: FastBus>(&mut self, bus: &mut B) {
         match self.fast_mode {
+            FastMode::Z80 => step_z80_fast(&mut self.state, &mut self.cycles, bus),
             FastMode::EZ80 => step_ez80_fast(&mut self.state, &mut self.cycles, bus),
-            FastMode::Z80 | FastMode::I8080 => {
-                panic!("step_fast currently supports Cpu::new_ez80()")
+            FastMode::I8080 => {
+                panic!("step_fast currently supports Cpu::new_z80() and Cpu::new_ez80()")
             }
         }
     }

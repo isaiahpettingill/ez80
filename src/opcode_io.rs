@@ -22,6 +22,7 @@ pub fn build_out_c_r(r: Reg8) -> Opcode {
             let address = env.state.reg.get16(Reg16::BC);
             let value = env.state.reg.get8(r);
             env.port_out(address, value);
+            env.state.reg.set_memptr(address.wrapping_add(1));
         }),
     }
 }
@@ -32,6 +33,7 @@ pub fn build_out_c_0() -> Opcode {
         action: Box::new(move |env: &mut Environment| {
             let address = env.state.reg.get16(Reg16::BC);
             env.port_out(address, 0);
+            env.state.reg.set_memptr(address.wrapping_add(1));
         }),
     }
 }
@@ -41,8 +43,12 @@ pub fn build_out_n_a() -> Opcode {
         name: "OUT (n), A".to_string(),
         action: Box::new(move |env: &mut Environment| {
             let a = env.state.reg.a();
-            let address = ((a as u16) << 8) + env.advance_pc() as u16;
+            let port = env.advance_pc();
+            let address = ((a as u16) << 8) + port as u16;
             env.port_out(address, a);
+            env.state
+                .reg
+                .set_memptr(((a as u16) << 8) | port.wrapping_add(1) as u16);
         }),
     }
 }
@@ -83,6 +89,7 @@ pub fn build_in_r_c(r: Reg8) -> Opcode {
             let address = env.state.reg.get16(Reg16::BC);
             let value = env.port_in(address);
             env.state.reg.set8(r, value);
+            env.state.reg.set_memptr(address.wrapping_add(1));
 
             env.state.reg.update_bits_in_flags(value);
         }),
@@ -95,6 +102,7 @@ pub fn build_in_0_c() -> Opcode {
         action: Box::new(move |env: &mut Environment| {
             let address = env.state.reg.get16(Reg16::BC);
             let value = env.port_in(address);
+            env.state.reg.set_memptr(address.wrapping_add(1));
 
             env.state.reg.update_bits_in_flags(value);
         }),
@@ -108,6 +116,7 @@ pub fn build_in_a_n() -> Opcode {
             let a = env.state.reg.a();
             let address = ((a as u16) << 8) + env.advance_pc() as u16;
             let value = env.port_in(address);
+            env.state.reg.set_memptr(address.wrapping_add(1));
             env.state.reg.set_a(value);
         }),
     }
@@ -308,10 +317,16 @@ pub fn build_out_block((inc, repeat, postfix): (bool, bool, &'static str)) -> Op
             // the OUTI/OTIR/OUTD/OTDR instructions use BC before decrementing B
             let address = env.state.reg.get16(Reg16::BC);
             let b = env.state.reg.inc_dec8(Reg8::B, false /* decrement */);
+            let memptr = env
+                .state
+                .reg
+                .get16(Reg16::BC)
+                .wrapping_add(if inc { 1 } else { 0xffff });
 
             // We won't have IX and IY cases to consider
             let value = env.reg8_ext(Reg8::_HL);
             env.port_out(address, value);
+            env.state.reg.set_memptr(memptr);
             if env.state.is_op_long() {
                 env.state.reg.inc_dec24(Reg16::HL, inc);
             } else {

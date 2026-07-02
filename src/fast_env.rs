@@ -147,6 +147,7 @@ impl<'a, B: FastBus> FastEnv<'a, B> {
 
     pub(crate) fn load_displacement(&mut self) {
         self.state.displacement = self.advance_pc() as i8;
+        self.state.reg.set_memptr(self.index_address() as u16);
     }
 
     pub(crate) fn trap_illegal_instruction(&mut self) {
@@ -329,22 +330,26 @@ impl<'a, B: FastBus> FastEnv<'a, B> {
             match self.state.sz_prefix {
                 SizePrefix::None => {
                     let pc = self.pop();
+                    self.state.reg.set_memptr(pc as u16);
                     self.state.set_pc(pc);
                 }
                 SizePrefix::LIL | SizePrefix::LIS => {
                     let adl_flag = self.pop_byte_spl();
                     if adl_flag & 1 == 1 {
                         let address = self.pop();
+                        self.state.reg.set_memptr(address as u16);
                         self.state.set_pc(address);
                     } else {
                         let mut address = self.pop_byte_spl() as u32;
                         address += (self.pop_byte_spl() as u32) << 8;
+                        self.state.reg.set_memptr(address as u16);
                         self.state.set_pc(address);
                         self.state.reg.adl = false;
                     }
                 }
                 _ => {
                     let pc = self.pop();
+                    self.state.reg.set_memptr(pc as u16);
                     self.state.set_pc(pc);
                 }
             }
@@ -352,22 +357,26 @@ impl<'a, B: FastBus> FastEnv<'a, B> {
             match self.state.sz_prefix {
                 SizePrefix::None => {
                     let pc = self.pop();
+                    self.state.reg.set_memptr(pc as u16);
                     self.state.set_pc(pc);
                 }
                 SizePrefix::LIL | SizePrefix::SIL => {
                     let adl_flag = self.pop_byte_spl();
                     if adl_flag & 1 == 1 {
                         let address = self.pop();
+                        self.state.reg.set_memptr(address as u16);
                         self.state.set_pc(address);
                         self.state.reg.adl = true;
                     } else {
                         let mut address = self.pop_byte_spl() as u32;
                         address += (self.pop_byte_spl() as u32) << 8;
+                        self.state.reg.set_memptr(address as u16);
                         self.state.set_pc(address);
                     }
                 }
                 _ => {
                     let pc = self.pop();
+                    self.state.reg.set_memptr(pc as u16);
                     self.state.set_pc(pc);
                 }
             }
