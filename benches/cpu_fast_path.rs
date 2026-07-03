@@ -3,9 +3,11 @@ use std::cell::Cell;
 use std::hint::black_box;
 use std::time::{Duration, Instant};
 
+const DHRYSTONE_Z80: &[u8] = include_bytes!("res/dhrystone-z80.bin");
 const MEM_SIZE: usize = 4 * 65536;
 const IO_SIZE: usize = 65536;
 const INSTRUCTIONS: usize = 250_000;
+const DHRYSTONE_RUNS: usize = 5_000;
 
 struct BenchBus {
     mem: Box<[u8; MEM_SIZE]>,
@@ -296,6 +298,32 @@ fn bench_sieve() {
     print_row("Eratosthenes sieve", reference, fast);
 }
 
+fn bench_dhrystone() {
+    let mut bus = BenchBus::new();
+    bus.mem[..DHRYSTONE_Z80.len()].copy_from_slice(DHRYSTONE_Z80);
+    let mut cpu = Cpu::new_z80();
+    let start = Instant::now();
+    while !cpu.is_halted() {
+        cpu.step_fast(&mut bus);
+    }
+    let elapsed = start.elapsed();
+    let runs_per_second = DHRYSTONE_RUNS as f64 / elapsed.as_secs_f64();
+    let instructions_per_run = cpu.state.instructions_executed as f64 / DHRYSTONE_RUNS as f64;
+    let cycles_per_run = cpu.cycles() as f64 / DHRYSTONE_RUNS as f64;
+    let pc = cpu.state.pc();
+    black_box(pc);
+    black_box(bus.mem[0x8000]);
+    println!(
+        "Dhrystone 2.1 Z80: {} runs, {:.0} runs/s, {:.0} instructions/run, {:.0} cycles/run, {:.0} cycles/s, halt pc=${:04x}",
+        DHRYSTONE_RUNS,
+        runs_per_second,
+        instructions_per_run,
+        cycles_per_run,
+        cpu.cycles() as f64 / elapsed.as_secs_f64(),
+        pc
+    );
+}
+
 fn bench_save_load() {
     let mut cpu = Cpu::new_ez80();
     cpu.set_adl(true);
@@ -365,6 +393,7 @@ fn main() {
         &[0xdd, 0x7e, 0x01, 0xfd, 0x77, 0x01],
     );
     bench_sieve();
+    bench_dhrystone();
     bench_save_load();
     bench_run_cycles();
 }

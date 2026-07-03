@@ -71,6 +71,7 @@ awk '
 ' "$SRC_DIR/v2.1/dhry_2.c" >"$PATCHED_2"
 
 perl -0pi -e 's/main \(\)/int main(void)/g;
+    s/\{\n    int n;\n    scanf \("%d", &n\);\n    Number_Of_Runs = n;\n  \}/Number_Of_Runs = DHRYSTONE_RUNS;/s;
     s/Proc_1 \(Ptr_Val_Par\)(.*?)\nREG Rec_Pointer Ptr_Val_Par;/void Proc_1(Rec_Pointer Ptr_Val_Par)$1/s;
     s/Proc_2 \(Int_Par_Ref\)(.*?)\nOne_Fifty\s+\*Int_Par_Ref;/void Proc_2(One_Fifty *Int_Par_Ref)$1/s;
     s/Proc_3 \(Ptr_Ref_Par\)(.*?)\nRec_Pointer \*Ptr_Ref_Par;\n/void Proc_3(Rec_Pointer *Ptr_Ref_Par)$1\n/s;
@@ -105,6 +106,7 @@ sdcc \
     --max-allocs-per-node 10000 \
     -DNOENUMS \
     -DTIME \
+    -DDHRYSTONE_RUNS="$DHRYSTONE_RUNS" \
     -I"$SRC_DIR/v2.1" \
     -I"$BUILD_DIR" \
     -c \

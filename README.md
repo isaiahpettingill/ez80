@@ -245,25 +245,33 @@ fast path: z80doc_fast, z80docflags_fast, z80flags_fast, z80full_fast, z80ccf_fa
 
 ### Fast-path benchmarks
 
-Run on 2026-07-02 with `cargo bench --bench cpu_fast_path`:
+Run on 2026-07-03 with `cargo bench --bench cpu_fast_path`:
+
+Benchmark context:
+
+- CPU: Intel(R) Core(TM) Ultra 9 285, 24 cores / 24 logical processors, 2500 MHz reported max clock
+- OS: Microsoft Windows 11 Pro 10.0.26200, 64-bit
+- Rust: rustc 1.95.0 (59807616e 2026-04-14), host x86_64-pc-windows-msvc, LLVM 22.1.2
+- SDCC: 4.6.0 #16555, target `-mz80`
 
 ```text
 benchmark                     ref ips     fast ips      ref cps     fast cps   speedup
 -----------------------------------------------------------------------------------------
-NOP loop                    221004243    302626801    221004243    302626801     1.37x
-register ALU loop           131704180    143656291    131704180    143656291     1.09x
-memory read/write           156112434    201991062    312220105    403975959     1.29x
-branch loop                 151911041    171162536    455733123    513487608     1.13x
-ADL load/store              109445558    184296963    547227789    921484814     1.68x
-IX/IY indexed               100022894    136959248    400075549    547815047     1.37x
-Eratosthenes sieve          126252505    164796838    503228680    656862175     1.31x
-save/load state                     -            -            -            -     2.7ns
-run_cycles loop                     -    303177298            -    303177298        -
+NOP loop                    201775626    273493053    201775626    273493053     1.36x
+register ALU loop           118317386    130967226    118317386    130967226     1.11x
+memory read/write           150848199    183266219    301691794    366526846     1.21x
+branch loop                 130589219    154750851    391767656    464252553     1.19x
+ADL load/store               97263283    161657622    486316414    808288111     1.66x
+IX/IY indexed                94362851    121733073    377436285    486912789     1.29x
+Eratosthenes sieve          113277660    144157429    451512367    574595749     1.27x
+Dhrystone 2.1 Z80: 5000 runs, 62789 runs/s, 1399 instructions/run, 3550 cycles/run, 222872908 cycles/s, halt pc=$0208
+save/load state                     -            -            -            -     5.4ns
+run_cycles loop                     -    256173788            -    256173788        -
 ```
 
 ### Dhrystone
 
-`scripts/bench_dhrystone.sh` builds Dhrystone 2.1 for Z80 with SDCC and writes artifacts under `target/dhrystone-z80` by default. A flat binary built with SDCC 4.6.0 is committed at `benches/res/dhrystone-z80.bin` so consumers can run it without a C compiler.
+`scripts/bench_dhrystone.sh` builds Dhrystone 2.1 for Z80 with SDCC and writes artifacts under `target/dhrystone-z80` by default. A flat binary built with SDCC 4.6.0 is committed at `benches/res/dhrystone-z80.bin` so consumers can run it without a C compiler. The benchmark harness runs this binary on the Z80 fast path until the SDCC CRT halts at `$0208`.
 
 ```text
 scripts/bench_dhrystone.sh
