@@ -44,6 +44,32 @@ To run Tiny Basic (from [cpuville](http://cpuville.com/Kits/Z80-kits-home.html))
 cargo run --bin cpuville
 ```
 
+To run the headless TI-84 Plus CE hardware scaffold, bring your own ROM dump from your calculator:
+
+```shell
+cargo run --example ti84ce_headless -- --rom "C:\Users\isaia\Downloads\TI-84 CE.rom" --max-steps 2000000
+```
+
+The example does not include or distribute TI firmware. It models enough hardware to demonstrate how to wire the eZ80 CPU to a calculator-like bus: 24-bit memory, separate input/output ports, boot-friendly status ports, a TI keypad matrix on port `$01`, and a small script language.
+
+Example script:
+
+```shell
+cargo run --example ti84ce_headless -- --rom path/to/ti84ce.rom --script "wait:946000; tap:clear:1000; tap:1:1000; tap:plus:1000; tap:2:1000; tap:enter:5000; dump"
+```
+
+Script commands are separated by semicolons or newlines:
+
+- `wait:N` or `step:N`: execute `N` instructions.
+- `until-wait:N`: execute up to `N` instructions, stopping early if a tight polling loop is detected.
+- `tap:key[:N]`: press and release a key, holding each phase for `N` instructions, default `20`.
+- `press:key+key` and `release:key+key`: hold or release one or more keys.
+- `setport:PORT=VALUE`: override a hardware input port, with decimal, `$hex`, or `0xhex` values.
+- `dump`: print CPU registers and most-used ports.
+- `run`: execute the default `--max-steps` budget.
+
+This is intentionally a headless starting point, not a complete CEmu/Wabbitemu replacement. LCD, USB, flash wait states, DMA, timers, interrupts, and the CE ASIC are only stubbed enough to show where hardware emulation belongs.
+
 ## Usage
 
 See [cpuville.rs](src/bin/cpuville.rs) or the CP/M 2.2 emulator [iz-cpm](https://github.com/ivanizag/iz-cpm) for more usage examples.
