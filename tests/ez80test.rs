@@ -563,6 +563,31 @@ fn test_tstio_n() {
 }
 
 #[test]
+fn test_in0_out0_a_n() {
+    let mut sys = PlainMachine::new();
+    let mut cpu = Cpu::new_ez80();
+
+    sys.poke(0x0000, 0x3e); // LD A,$5a
+    sys.poke(0x0001, 0x5a);
+    sys.poke(0x0002, 0xed); // OUT0 ($0d),A
+    sys.poke(0x0003, 0x39);
+    sys.poke(0x0004, 0x0d);
+    sys.poke(0x0005, 0xaf); // XOR A
+    sys.poke(0x0006, 0xed); // IN0 A,($0d)
+    sys.poke(0x0007, 0x38);
+    sys.poke(0x0008, 0x0d);
+
+    for _ in 0..4 {
+        cpu.execute_instruction(&mut sys);
+    }
+
+    assert_eq!(0x0009, cpu.state.pc());
+    assert_eq!(0x5a, cpu.registers().get8(Reg8::A));
+    assert_eq!(false, cpu.registers().get_flag(Flag::Z));
+    assert_eq!(false, cpu.registers().get_flag(Flag::S));
+}
+
+#[test]
 fn test_slp_halts_cpu() {
     let mut sys = PlainMachine::new();
     let mut cpu = Cpu::new_ez80();
