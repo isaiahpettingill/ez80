@@ -263,9 +263,10 @@ run_cycles loop                     -    303177298            -    303177298    
 
 ### Dhrystone
 
-`scripts/bench_dhrystone.sh` builds Dhrystone 2.1 for Z80 with SDCC and writes artifacts under `target/dhrystone-z80` by default. No Dhrystone binary is committed yet because SDCC was not installed in the verification environment:
+`scripts/bench_dhrystone.sh` builds Dhrystone 2.1 for Z80 with SDCC and writes artifacts under `target/dhrystone-z80` by default. A flat binary built with SDCC 4.6.0 is committed at `benches/res/dhrystone-z80.bin` so consumers can run it without a C compiler.
 
 ```text
-sdcc was not found. Install SDCC, then rerun this script.
+scripts/bench_dhrystone.sh
+Built target/dhrystone-z80/dhrystone-z80.ihx and target/dhrystone-z80/dhrystone-z80.bin
 ```
 
