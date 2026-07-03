@@ -47,7 +47,7 @@ cargo run --bin cpuville
 To run the headless TI-84 Plus CE hardware scaffold, bring your own ROM dump from your calculator:
 
 ```shell
-cargo run --example ti84ce_headless -- --rom "C:\Users\isaia\Downloads\TI-84 CE.rom" --max-steps 2000000
+cargo run --example ti84ce_headless -- --rom path/to/ti84ce.rom --max-steps 2000000
 ```
 
 The example does not include or distribute TI firmware. It models enough hardware to demonstrate how to wire the eZ80 CPU to a calculator-like bus: 24-bit memory, separate input/output ports, boot-friendly status ports, a TI keypad matrix on port `$01`, and a small script language.
