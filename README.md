@@ -70,6 +70,22 @@ Script commands are separated by semicolons or newlines:
 
 This is intentionally a headless starting point, not a complete CEmu/Wabbitemu replacement. LCD, USB, flash wait states, DMA, timers, interrupts, and the CE ASIC are only stubbed enough to show where hardware emulation belongs.
 
+### Headless Agon Light MOS program scaffold
+
+`examples/agon_light_headless.rs` is a rudimentary Agon Light-style runner for flat eZ80 ADL binaries. It loads a program into 24-bit RAM, runs it from `$040000` by default, prints bytes written to UART-like output ports, and semihosts simple `RST.LIL 08h`/`RST.LIL 10h` output traps. It is meant for MOS-program bring-up, not a complete MOS/VDP/SD-card emulator.
+
+Run the built-in output demo:
+
+```sh
+cargo run --example agon_light_headless
+```
+
+Run a binary at the default Agon user-program address:
+
+```sh
+cargo run --example agon_light_headless -- --program path/to/program.bin
+```
+
 ## Usage
 
 See [cpuville.rs](src/bin/cpuville.rs) or the CP/M 2.2 emulator [iz-cpm](https://github.com/ivanizag/iz-cpm) for more usage examples.
