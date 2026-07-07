@@ -33,6 +33,10 @@ pub struct State {
     pub cached_instruction: bool,
     pub illegal_instruction: bool,
     pub illegal_instruction_adl: bool,
+    pub i8085_interrupt_mask: u8,
+    pub i8085_pending_interrupts: u8,
+    pub i8085_serial_input: bool,
+    pub i8085_serial_output: bool,
 }
 
 impl State {
@@ -50,6 +54,10 @@ impl State {
             cached_instruction: false,
             illegal_instruction: false,
             illegal_instruction_adl: false,
+            i8085_interrupt_mask: 0,
+            i8085_pending_interrupts: 0,
+            i8085_serial_input: false,
+            i8085_serial_output: false,
         }
     }
 

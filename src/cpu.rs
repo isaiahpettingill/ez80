@@ -118,10 +118,17 @@ impl Cpu {
 
     /// Returns an Intel 8085 CPU instance.
     pub fn new_8085() -> Cpu {
-        Cpu {
+        let mut cpu = Cpu {
+            state: State::new(),
+            trace: false,
+            decoder: Box::new(Decoder8080::new_8085()),
+            cycles: 0,
+            fast_mode: FastMode::I8080,
             mode: CpuMode::I8085,
-            ..Self::new_8080()
-        }
+        };
+
+        cpu.state.reg.set_8080();
+        cpu
     }
 
     /// Returns a CPU configured for the requested mode.

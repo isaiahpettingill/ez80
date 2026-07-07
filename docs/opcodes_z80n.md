@@ -569,11 +569,11 @@ The tables list every opcode form decoded by this mode. `NONINOP` is the emulato
 | `ed 25` | `NONINOP` |
 | `ed 26` | `NONINOP` |
 | `ed 27 34` | `TST A, $34` |
-| `ed 28` | `NONINOP` |
-| `ed 29` | `NONINOP` |
-| `ed 2a` | `NONINOP` |
-| `ed 2b` | `NONINOP` |
-| `ed 2c` | `NONINOP` |
+| `ed 28` | `BSLA DE, B` |
+| `ed 29` | `BSRA DE, B` |
+| `ed 2a` | `BSRL DE, B` |
+| `ed 2b` | `BSRF DE, B` |
+| `ed 2c` | `BRLC DE, B` |
 | `ed 2d` | `NONINOP` |
 | `ed 2e` | `NONINOP` |
 | `ed 2f` | `NONINOP` |
@@ -667,21 +667,21 @@ The tables list every opcode form decoded by this mode. `NONINOP` is the emulato
 | `ed 87` | `NONINOP` |
 | `ed 88` | `NONINOP` |
 | `ed 89` | `NONINOP` |
-| `ed 8a` | `NONINOP` |
+| `ed 8a 34 12` | `PUSH $1234` |
 | `ed 8b` | `NONINOP` |
 | `ed 8c` | `NONINOP` |
 | `ed 8d` | `NONINOP` |
 | `ed 8e` | `NONINOP` |
 | `ed 8f` | `NONINOP` |
-| `ed 90` | `NONINOP` |
-| `ed 91 34` | `NEXTREG $34, A` |
-| `ed 92 34` | `NEXTREG $34, $34` |
-| `ed 93` | `NONINOP` |
-| `ed 94` | `NONINOP` |
-| `ed 95` | `NONINOP` |
+| `ed 90` | `OUTINB` |
+| `ed 91 34` | `NEXTREG $34, $34` |
+| `ed 92 34` | `NEXTREG $34, A` |
+| `ed 93` | `PIXELDN` |
+| `ed 94` | `PIXELAD` |
+| `ed 95` | `SETAE` |
 | `ed 96` | `NONINOP` |
 | `ed 97` | `NONINOP` |
-| `ed 98` | `NONINOP` |
+| `ed 98` | `JP (C)` |
 | `ed 99` | `NONINOP` |
 | `ed 9a` | `NONINOP` |
 | `ed 9b` | `NONINOP` |
@@ -693,15 +693,15 @@ The tables list every opcode form decoded by this mode. `NONINOP` is the emulato
 | `ed a1` | `CPI` |
 | `ed a2` | `INI` |
 | `ed a3` | `OUTI` |
-| `ed a4` | `NONINOP` |
-| `ed a5` | `NONINOP` |
+| `ed a4` | `LDIX` |
+| `ed a5` | `LDWS` |
 | `ed a6` | `NONINOP` |
 | `ed a7` | `NONINOP` |
 | `ed a8` | `LDD` |
 | `ed a9` | `CPD` |
 | `ed aa` | `IND` |
 | `ed ab` | `OUTD` |
-| `ed ac` | `NONINOP` |
+| `ed ac` | `LDDX` |
 | `ed ad` | `NONINOP` |
 | `ed ae` | `NONINOP` |
 | `ed af` | `NONINOP` |
@@ -709,15 +709,15 @@ The tables list every opcode form decoded by this mode. `NONINOP` is the emulato
 | `ed b1` | `CPIR` |
 | `ed b2` | `INIR` |
 | `ed b3` | `OTIR` |
-| `ed b4` | `NONINOP` |
+| `ed b4` | `LDIRX` |
 | `ed b5` | `NONINOP` |
 | `ed b6` | `NONINOP` |
-| `ed b7` | `NONINOP` |
+| `ed b7` | `LDPIRX` |
 | `ed b8` | `LDDR` |
 | `ed b9` | `CPDR` |
 | `ed ba` | `INDR` |
 | `ed bb` | `OTDR` |
-| `ed bc` | `NONINOP` |
+| `ed bc` | `LDDRX` |
 | `ed bd` | `NONINOP` |
 | `ed be` | `NONINOP` |
 | `ed bf` | `NONINOP` |

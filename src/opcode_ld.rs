@@ -374,6 +374,98 @@ pub fn build_ld_block((inc, repeat, postfix): (bool, bool, &'static str)) -> Opc
     }
 }
 
+pub fn build_next_ldx(inc_hl: bool, repeat: bool, pattern: bool, name: &'static str) -> Opcode {
+    Opcode {
+        name: name.to_string(),
+        action: Box::new(move |env: &mut Environment| {
+            let source = if pattern {
+                (env.state.reg.get16(Reg16::HL) & 0xfff8)
+                    | (env.state.reg.get16(Reg16::DE) & 0x0007)
+            } else {
+                env.state.reg.get16(Reg16::HL)
+            };
+            let value = env.peek(source as u32);
+            if value != env.state.reg.a() {
+                env.poke(env.state.reg.get16(Reg16::DE) as u32, value);
+            }
+            env.state.reg.inc_dec16(Reg16::DE, true);
+            if !pattern {
+                env.state.reg.inc_dec16(Reg16::HL, inc_hl);
+            }
+            let bc = env.state.reg.inc_dec16(Reg16::BC, false);
+            if repeat && bc != 0 {
+                let pc = env.wrap_address(env.state.pc(), -2);
+                env.state.set_pc(pc);
+            }
+        }),
+    }
+}
+
+pub fn build_ldws() -> Opcode {
+    Opcode {
+        name: "LDWS".to_string(),
+        action: Box::new(move |env: &mut Environment| {
+            let value = env.peek(env.state.reg.get16(Reg16::HL) as u32);
+            env.poke(env.state.reg.get16(Reg16::DE) as u32, value);
+            let l = env.state.reg.get8(Reg8::L).wrapping_add(1);
+            env.state.reg.set8(Reg8::L, l);
+            let old_d = env.state.reg.get8(Reg8::D);
+            let d = old_d.wrapping_add(1);
+            env.state.reg.set8(Reg8::D, d);
+            env.state
+                .reg
+                .update_arithmetic_flags(old_d as u16, 1, d as u16, false, false);
+        }),
+    }
+}
+
+pub fn build_pixeldn() -> Opcode {
+    Opcode {
+        name: "PIXELDN".to_string(),
+        action: Box::new(move |env: &mut Environment| {
+            let h = env.state.reg.get8(Reg8::H);
+            let l = env.state.reg.get8(Reg8::L);
+            let (h, l) = if h & 0x07 != 0x07 {
+                (h.wrapping_add(1), l)
+            } else {
+                let l2 = l.wrapping_add(0x20);
+                let h2 = if l2 < l {
+                    h.wrapping_sub(0x07)
+                } else {
+                    h & 0xf8
+                };
+                (h2, l2)
+            };
+            env.state.reg.set8(Reg8::H, h);
+            env.state.reg.set8(Reg8::L, l);
+        }),
+    }
+}
+
+pub fn build_pixelad() -> Opcode {
+    Opcode {
+        name: "PIXELAD".to_string(),
+        action: Box::new(move |env: &mut Environment| {
+            let y = env.state.reg.get8(Reg8::D) as u16;
+            let x = env.state.reg.get8(Reg8::E) as u16;
+            let address =
+                0x4000 | ((y & 0xc0) << 5) | ((y & 0x07) << 8) | ((y & 0x38) << 2) | (x >> 3);
+            env.state.reg.set16(Reg16::HL, address);
+        }),
+    }
+}
+
+pub fn build_setae() -> Opcode {
+    Opcode {
+        name: "SETAE".to_string(),
+        action: Box::new(move |env: &mut Environment| {
+            env.state
+                .reg
+                .set_a(0x80 >> (env.state.reg.get8(Reg8::E) & 0x07));
+        }),
+    }
+}
+
 pub fn build_ld_a_mb() -> Opcode {
     Opcode {
         name: "LD A, MB".to_string(),

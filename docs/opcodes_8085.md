@@ -39,7 +39,7 @@ The tables list every opcode form decoded by this mode. `NONINOP` is the emulato
 | `1d` | `DEC E` |
 | `1e 34` | `LD E, $34` |
 | `1f` | `RRA` |
-| `20` | `NOP` |
+| `20` | `RIM` |
 | `21 34 12` | `LD HL, $1234` |
 | `22 34 12` | `LD ($1234), HL` |
 | `23` | `INC HL` |
@@ -55,7 +55,7 @@ The tables list every opcode form decoded by this mode. `NONINOP` is the emulato
 | `2d` | `DEC L` |
 | `2e 34` | `LD L, $34` |
 | `2f` | `CPL` |
-| `30` | `NOP` |
+| `30` | `SIM` |
 | `31 34 12` | `LD SP, $1234` |
 | `32 34 12` | `LD ($1234), A` |
 | `33` | `INC SP` |

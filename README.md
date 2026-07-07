@@ -117,9 +117,9 @@ let cpu = Cpu::new_for_mode(CpuMode::Z80N);
 Available modes:
 
 - `Cpu::new_8080()` / `CpuMode::I8080`: Intel 8080-compatible decoding.
-- `Cpu::new_8085()` / `CpuMode::I8085`: Intel 8085 mode using the 8080-compatible instruction set.
+- `Cpu::new_8085()` / `CpuMode::I8085`: Intel 8085 mode using the 8080-compatible instruction set plus `RIM` and `SIM`.
 - `Cpu::new_z80()` / `CpuMode::Z80`: Zilog Z80 decoding. `Cpu::new()` is an alias for this mode.
-- `Cpu::new_z80n()` / `CpuMode::Z80N`: ZX Spectrum Next Z80N decoding, including implemented Next extensions such as `SWAPNIB`, `MIRROR A`, `TEST n`, `MUL D,E`, `ADD rr,A`, `ADD rr,nn`, and `NEXTREG`.
+- `Cpu::new_z80n()` / `CpuMode::Z80N`: ZX Spectrum Next Z80N decoding, including Next extensions such as `SWAPNIB`, `MIRROR A`, `TEST n`, `BSLA`/`BSRA`/`BSRL`/`BSRF`/`BRLC`, `MUL D,E`, `ADD rr,A`, `ADD rr,nn`, `PUSH nn`, `OUTINB`, `NEXTREG`, `PIXELDN`, `PIXELAD`, `SETAE`, `JP (C)`, `LDIX`, `LDWS`, `LDDX`, `LDIRX`, `LDPIRX`, and `LDDRX`.
 - `Cpu::new_z180()` / `CpuMode::Z180`: Zilog Z180 decoding as Z80 plus implemented Z180 ED-prefix extensions such as `IN0`, `OUT0`, `TST`, `TSTIO`, `MLT`, `OTIM`/`OTDM`, and `SLP`.
 - `Cpu::new_ez80()` / `CpuMode::EZ80`: Zilog eZ80 decoding, including ADL mode and eZ80 size prefixes.
 

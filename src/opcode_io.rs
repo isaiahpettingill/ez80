@@ -145,6 +145,29 @@ pub fn build_nextreg_n_a() -> Opcode {
     }
 }
 
+pub fn build_outinb() -> Opcode {
+    Opcode {
+        name: "OUTINB".to_string(),
+        action: Box::new(move |env: &mut Environment| {
+            let value = env.reg8_ext(Reg8::_HL);
+            let address = env.state.reg.get16(Reg16::BC);
+            env.port_out(address, value);
+            env.state.reg.inc_dec16(Reg16::HL, true);
+            env.state.reg.inc_dec8(Reg8::C, true);
+        }),
+    }
+}
+
+pub fn build_jp_c_indirect() -> Opcode {
+    Opcode {
+        name: "JP (C)".to_string(),
+        action: Box::new(move |env: &mut Environment| {
+            let value = env.port_in(env.state.reg.get16(Reg16::BC));
+            env.state.set_pc((value as u32) << 6);
+        }),
+    }
+}
+
 pub fn build_nextreg_n_n() -> Opcode {
     Opcode {
         name: "NEXTREG n, n".to_string(),

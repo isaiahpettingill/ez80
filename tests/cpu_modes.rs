@@ -64,13 +64,126 @@ fn z80n_runs_next_extensions() {
     assert_eq!(0x2239, cpu.registers().get16(Reg16::HL));
 
     cpu.registers().set_a(0x99);
-    run(&[0xed, 0x91, 0x12], &mut cpu, &mut machine); // NEXTREG $12,A
+    run(&[0xed, 0x92, 0x12], &mut cpu, &mut machine); // NEXTREG $12,A
     assert_eq!(0x12, machine.port_in(0x243b));
     assert_eq!(0x99, machine.port_in(0x253b));
 
-    run(&[0xed, 0x92, 0x34, 0x56], &mut cpu, &mut machine); // NEXTREG $34,$56
+    run(&[0xed, 0x91, 0x34, 0x56], &mut cpu, &mut machine); // NEXTREG $34,$56
     assert_eq!(0x34, machine.port_in(0x243b));
     assert_eq!(0x56, machine.port_in(0x253b));
+}
+
+#[test]
+fn z80n_runs_remaining_next_extensions() {
+    let mut cpu = Cpu::new_z80n();
+    let mut machine = PlainMachine::new();
+
+    cpu.registers().set8(Reg8::B, 4);
+    cpu.registers().set16(Reg16::DE, 0x1234);
+    run(&[0xed, 0x28], &mut cpu, &mut machine); // BSLA DE,B
+    assert_eq!(0x2340, cpu.registers().get16(Reg16::DE));
+
+    cpu.registers().set8(Reg8::B, 1);
+    cpu.registers().set16(Reg16::DE, 0x8001);
+    run(&[0xed, 0x29], &mut cpu, &mut machine); // BSRA DE,B
+    assert_eq!(0xc000, cpu.registers().get16(Reg16::DE));
+
+    cpu.registers().set16(Reg16::SP, 0x2000);
+    run(&[0xed, 0x8a, 0x12, 0x34], &mut cpu, &mut machine); // PUSH $1234
+    assert_eq!(0x1ffe, cpu.registers().get16(Reg16::SP));
+    assert_eq!(0x34, machine.peek(0x1ffe));
+    assert_eq!(0x12, machine.peek(0x1fff));
+
+    cpu.registers().set16(Reg16::BC, 0x7720);
+    cpu.registers().set16(Reg16::HL, 0x3000);
+    machine.poke(0x3000, 0x5a);
+    run(&[0xed, 0x90], &mut cpu, &mut machine); // OUTINB
+    assert_eq!(0x5a, machine.port_in(0x7720));
+    assert_eq!(0x77, cpu.registers().get8(Reg8::B));
+    assert_eq!(0x21, cpu.registers().get8(Reg8::C));
+    assert_eq!(0x3001, cpu.registers().get16(Reg16::HL));
+
+    cpu.registers().set16(Reg16::HL, 0x4000);
+    run(&[0xed, 0x93], &mut cpu, &mut machine); // PIXELDN
+    assert_eq!(0x4100, cpu.registers().get16(Reg16::HL));
+
+    cpu.registers().set8(Reg8::D, 64);
+    cpu.registers().set8(Reg8::E, 16);
+    run(&[0xed, 0x94], &mut cpu, &mut machine); // PIXELAD
+    assert_eq!(0x4802, cpu.registers().get16(Reg16::HL));
+
+    run(&[0xed, 0x95], &mut cpu, &mut machine); // SETAE
+    assert_eq!(0x80, cpu.registers().a());
+
+    cpu.registers().set16(Reg16::BC, 0x0012);
+    machine.port_out(0x0012, 0x03);
+    run(&[0xed, 0x98], &mut cpu, &mut machine); // JP (C)
+    assert_eq!(0x00c0, cpu.state.pc());
+}
+
+#[test]
+fn z80n_runs_extended_block_copy_opcodes() {
+    let mut cpu = Cpu::new_z80n();
+    let mut machine = PlainMachine::new();
+
+    cpu.registers().set_a(0x00);
+    cpu.registers().set16(Reg16::HL, 0x2100);
+    cpu.registers().set16(Reg16::DE, 0x2200);
+    cpu.registers().set16(Reg16::BC, 1);
+    machine.poke(0x2100, 0x66);
+    run(&[0xed, 0xa4], &mut cpu, &mut machine); // LDIX
+    assert_eq!(0x66, machine.peek(0x2200));
+    assert_eq!(0x2101, cpu.registers().get16(Reg16::HL));
+    assert_eq!(0x2201, cpu.registers().get16(Reg16::DE));
+    assert_eq!(0, cpu.registers().get16(Reg16::BC));
+
+    cpu.registers().set16(Reg16::HL, 0x2101);
+    cpu.registers().set16(Reg16::DE, 0x2201);
+    cpu.registers().set8(Reg8::L, 0x01);
+    cpu.registers().set8(Reg8::D, 0x22);
+    machine.poke(0x2101, 0x77);
+    run(&[0xed, 0xa5], &mut cpu, &mut machine); // LDWS
+    assert_eq!(0x77, machine.peek(0x2201));
+    assert_eq!(0x02, cpu.registers().get8(Reg8::L));
+    assert_eq!(0x23, cpu.registers().get8(Reg8::D));
+
+    cpu.registers().set_a(0xff);
+    cpu.registers().set16(Reg16::HL, 0x2103);
+    cpu.registers().set16(Reg16::DE, 0x2203);
+    cpu.registers().set16(Reg16::BC, 1);
+    machine.poke(0x2103, 0x88);
+    run(&[0xed, 0xac], &mut cpu, &mut machine); // LDDX
+    assert_eq!(0x88, machine.peek(0x2203));
+    assert_eq!(0x2102, cpu.registers().get16(Reg16::HL));
+    assert_eq!(0x2204, cpu.registers().get16(Reg16::DE));
+
+    cpu.registers().set16(Reg16::HL, 0x2300);
+    cpu.registers().set16(Reg16::DE, 0x2402);
+    cpu.registers().set16(Reg16::BC, 1);
+    machine.poke(0x2302, 0x99);
+    run(&[0xed, 0xb7], &mut cpu, &mut machine); // LDPIRX
+    assert_eq!(0x99, machine.peek(0x2402));
+    assert_eq!(0x2300, cpu.registers().get16(Reg16::HL));
+    assert_eq!(0x2403, cpu.registers().get16(Reg16::DE));
+}
+
+#[test]
+fn i8085_runs_added_rim_sim_opcodes() {
+    let mut cpu = Cpu::new_8085();
+    let mut machine = PlainMachine::new();
+    cpu.registers().set_a(0x0d); // enable mask update, mask RST5.5 and RST7.5
+    run(&[0x30], &mut cpu, &mut machine); // SIM
+    assert_eq!(0x05, cpu.state.i8085_interrupt_mask);
+
+    cpu.state.i8085_pending_interrupts = 0x03;
+    cpu.state.i8085_serial_input = true;
+    run(&[0x20], &mut cpu, &mut machine); // RIM
+    assert_eq!(0xb5, cpu.registers().a());
+
+    let mut cpu_8080 = Cpu::new_8080();
+    cpu_8080.registers().set_a(0xaa);
+    run(&[0x20], &mut cpu_8080, &mut machine); // 8080 keeps opcode $20 as NOP
+    assert_eq!(0xaa, cpu_8080.registers().a());
 }
 
 #[test]

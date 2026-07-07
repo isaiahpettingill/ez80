@@ -407,6 +407,11 @@ impl DecoderZ80 {
         self.prefix_ed[0x23] = Some(build_swapnib());
         self.prefix_ed[0x24] = Some(build_mirror_a());
         self.prefix_ed[0x27] = Some(build_tst_a_n());
+        self.prefix_ed[0x28] = Some(build_bs_de_b(NextBsMode::LeftArithmetic));
+        self.prefix_ed[0x29] = Some(build_bs_de_b(NextBsMode::RightArithmetic));
+        self.prefix_ed[0x2a] = Some(build_bs_de_b(NextBsMode::RightLogical));
+        self.prefix_ed[0x2b] = Some(build_bs_de_b(NextBsMode::RightFill));
+        self.prefix_ed[0x2c] = Some(build_bs_de_b(NextBsMode::RotateLeft));
         self.prefix_ed[0x30] = Some(build_mul_de());
         self.prefix_ed[0x31] = Some(build_add_rr_a(Reg16::HL));
         self.prefix_ed[0x32] = Some(build_add_rr_a(Reg16::DE));
@@ -414,8 +419,20 @@ impl DecoderZ80 {
         self.prefix_ed[0x34] = Some(build_add_rr_nn(Reg16::HL));
         self.prefix_ed[0x35] = Some(build_add_rr_nn(Reg16::DE));
         self.prefix_ed[0x36] = Some(build_add_rr_nn(Reg16::BC));
-        self.prefix_ed[0x91] = Some(build_nextreg_n_a());
-        self.prefix_ed[0x92] = Some(build_nextreg_n_n());
+        self.prefix_ed[0x8a] = Some(build_push_immediate16_be());
+        self.prefix_ed[0x90] = Some(build_outinb());
+        self.prefix_ed[0x91] = Some(build_nextreg_n_n());
+        self.prefix_ed[0x92] = Some(build_nextreg_n_a());
+        self.prefix_ed[0x93] = Some(build_pixeldn());
+        self.prefix_ed[0x94] = Some(build_pixelad());
+        self.prefix_ed[0x95] = Some(build_setae());
+        self.prefix_ed[0x98] = Some(build_jp_c_indirect());
+        self.prefix_ed[0xa4] = Some(build_next_ldx(true, false, false, "LDIX"));
+        self.prefix_ed[0xa5] = Some(build_ldws());
+        self.prefix_ed[0xac] = Some(build_next_ldx(false, false, false, "LDDX"));
+        self.prefix_ed[0xb4] = Some(build_next_ldx(true, true, false, "LDIRX"));
+        self.prefix_ed[0xb7] = Some(build_next_ldx(true, true, true, "LDPIRX"));
+        self.prefix_ed[0xbc] = Some(build_next_ldx(false, true, false, "LDDRX"));
     }
 
     fn load_z180_prefix_ed(&mut self) {

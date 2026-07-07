@@ -88,6 +88,46 @@ pub fn build_mul_de() -> Opcode {
     }
 }
 
+pub fn build_bs_de_b(mode: NextBsMode) -> Opcode {
+    Opcode {
+        name: mode.name().to_string(),
+        action: Box::new(move |env: &mut Environment| {
+            let mut value = env.state.reg.get16(Reg16::DE);
+            for _ in 0..env.state.reg.get8(Reg8::B) {
+                value = match mode {
+                    NextBsMode::LeftArithmetic => value.wrapping_shl(1),
+                    NextBsMode::RightArithmetic => ((value as i16) >> 1) as u16,
+                    NextBsMode::RightLogical => value >> 1,
+                    NextBsMode::RightFill => (value >> 1) | 0x8000,
+                    NextBsMode::RotateLeft => value.rotate_left(1),
+                };
+            }
+            env.state.reg.set16(Reg16::DE, value);
+        }),
+    }
+}
+
+#[derive(Copy, Clone)]
+pub enum NextBsMode {
+    LeftArithmetic,
+    RightArithmetic,
+    RightLogical,
+    RightFill,
+    RotateLeft,
+}
+
+impl NextBsMode {
+    fn name(self) -> &'static str {
+        match self {
+            Self::LeftArithmetic => "BSLA DE, B",
+            Self::RightArithmetic => "BSRA DE, B",
+            Self::RightLogical => "BSRL DE, B",
+            Self::RightFill => "BSRF DE, B",
+            Self::RotateLeft => "BRLC DE, B",
+        }
+    }
+}
+
 pub fn build_add_rr_a(rr: Reg16) -> Opcode {
     Opcode {
         name: format!("ADD {:?}, A", rr),

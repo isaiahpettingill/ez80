@@ -62,6 +62,13 @@ impl Decoder8080 {
         decoder
     }
 
+    pub fn new_8085() -> Decoder8080 {
+        let mut decoder = Self::new();
+        decoder.no_prefix[0x20] = Some(build_rim());
+        decoder.no_prefix[0x30] = Some(build_sim());
+        decoder
+    }
+
     fn load_no_prefix(&mut self) {
         for c in 0..=255 {
             let p = DecodingHelper::parts(c);

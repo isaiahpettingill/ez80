@@ -126,11 +126,57 @@ pub fn build_halt() -> Opcode {
     }
 }
 
+pub fn build_rim() -> Opcode {
+    Opcode {
+        name: "RIM".to_string(),
+        action: Box::new(move |env: &mut Environment| {
+            let mut value = env.state.i8085_interrupt_mask & 0x07;
+            if env.state.reg.get_iff1() {
+                value |= 0x08;
+            }
+            value |= (env.state.i8085_pending_interrupts & 0x07) << 4;
+            if env.state.i8085_serial_input {
+                value |= 0x80;
+            }
+            env.state.reg.set_a(value);
+        }),
+    }
+}
+
+pub fn build_sim() -> Opcode {
+    Opcode {
+        name: "SIM".to_string(),
+        action: Box::new(move |env: &mut Environment| {
+            let value = env.state.reg.a();
+            if value & 0x08 != 0 {
+                env.state.i8085_interrupt_mask = value & 0x07;
+            }
+            if value & 0x10 != 0 {
+                env.state.i8085_pending_interrupts &= !0x04;
+            }
+            if value & 0x40 != 0 {
+                env.state.i8085_serial_output = value & 0x80 != 0;
+            }
+        }),
+    }
+}
+
 pub fn build_slp() -> Opcode {
     Opcode {
         name: "SLP".to_string(),
         action: Box::new(move |env: &mut Environment| {
             env.state.halted = true;
+        }),
+    }
+}
+
+pub fn build_push_immediate16_be() -> Opcode {
+    Opcode {
+        name: "PUSH nn".to_string(),
+        action: Box::new(move |env: &mut Environment| {
+            let hi = env.advance_pc() as u16;
+            let lo = env.advance_pc() as u16;
+            env.push((hi << 8 | lo) as u32);
         }),
     }
 }
