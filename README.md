@@ -44,6 +44,14 @@ To run Tiny Basic (from [cpuville](http://cpuville.com/Kits/Z80-kits-home.html))
 cargo run --bin cpuville
 ```
 
+To run a CP/M transient `.COM` program with host-backed console BDOS calls:
+
+```shell
+cargo run --example cpm -- --program path/to/PROGRAM.COM --cpu z80
+```
+
+The CP/M example loads the program at `$0100`, installs warm boot and BDOS traps, initializes the command tail and default FCBs from `--tail`, and implements common console BDOS calls plus minimal host-file FCB open/read support. Use `--host-dir DIR` as the CP/M drive directory and `--tail "FILE.TXT"` to populate the command line and first FCB.
+
 To run the headless TI-84 Plus CE hardware scaffold, bring your own ROM dump from your calculator:
 
 ```shell
