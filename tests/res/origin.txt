@@ -4,4 +4,10 @@ https://github.com/anotherlin/z80emu
 8080EX1 code from:
 https://github.com/begoon/i8080-core
 
+Agon Platform MOS 3.0.2 binary from:
+https://github.com/AgonPlatform/agon-mos/releases/download/v3.0.2/MOS.bin
 
+Agon Platform VDP 2.16.0 binaries from:
+https://github.com/AgonPlatform/agon-vdp/releases/tag/v2.16.0
+
+Agon Platform MOS and VDP are MIT licensed.
