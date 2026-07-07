@@ -52,6 +52,12 @@ cargo run --example cpm -- --program path/to/PROGRAM.COM --cpu z80
 
 The CP/M example loads the program at `$0100`, installs warm boot and BDOS traps, initializes the command tail and default FCBs from `--tail`, and implements common console BDOS calls plus minimal host-file FCB open/read support. Use `--host-dir DIR` as the CP/M drive directory and `--tail "FILE.TXT"` to populate the command line and first FCB.
 
+Optional compatibility checks use programs from [skx/cpm-dist](https://github.com/skx/cpm-dist):
+
+```shell
+CPM_DIST_DIR=/path/to/cpm-dist cargo test --test cpm_dist -- --ignored --nocapture
+```
+
 To run the headless TI-84 Plus CE hardware scaffold, bring your own ROM dump from your calculator:
 
 ```shell

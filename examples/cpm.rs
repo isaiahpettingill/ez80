@@ -9,6 +9,7 @@ const BDOS: u16 = 0x0005;
 const DEFAULT_DMA: u16 = 0x0080;
 const FCB1: u16 = 0x005c;
 const FCB2: u16 = 0x006c;
+const DISK_INFO: u16 = 0xef00;
 
 fn main() -> Result<(), String> {
     let args = Args::parse()?;
@@ -141,13 +142,18 @@ impl CpmMachine {
     }
 
     fn init_command_area(&mut self, tail: &str) {
-        let tail = tail.as_bytes();
-        let len = tail.len().min(126);
+        let command_tail = if tail.is_empty() {
+            String::new()
+        } else {
+            format!(" {tail}")
+        };
+        let tail_bytes = command_tail.as_bytes();
+        let len = tail_bytes.len().min(126);
         self.write8(DEFAULT_DMA, len as u8);
-        self.load(DEFAULT_DMA + 1, &tail[..len]);
+        self.load(DEFAULT_DMA + 1, &tail_bytes[..len]);
         self.write8(DEFAULT_DMA + 1 + len as u16, b'\r');
 
-        let mut words = String::from_utf8_lossy(tail).into_owned();
+        let mut words = tail.to_string();
         words.make_ascii_uppercase();
         let mut words = words.split_whitespace();
         self.write_fcb(FCB1, words.next());
@@ -164,7 +170,15 @@ impl CpmMachine {
             10 => self.read_console_buffer(cpu.registers().get16(Reg16::DE))?,
             11 => self.return_byte(cpu, 0),
             12 => cpu.registers().set16(Reg16::HL, 0x0022),
+            13 => {}
+            14 => self.return_byte(cpu, 0),
+            25 => self.return_byte(cpu, 0),
             26 => self.dma = cpu.registers().get16(Reg16::DE),
+            27 => cpu.registers().set16(Reg16::HL, DISK_INFO),
+            24 => cpu.registers().set16(Reg16::HL, 0x0001),
+            29 => cpu.registers().set16(Reg16::HL, 0x0000),
+            31 => cpu.registers().set16(Reg16::HL, DISK_INFO + 16),
+            32 => self.return_byte(cpu, 0),
             15 => self.open_file(cpu),
             16 => self.return_byte(cpu, 0),
             20 => self.read_sequential(cpu),
@@ -351,9 +365,9 @@ fn resolve_case_insensitive(dir: &Path, name: &str) -> PathBuf {
 
 fn read_console_byte() -> Result<u8, String> {
     let mut byte = [0];
-    io::stdin()
-        .read_exact(&mut byte)
-        .map_err(|e| e.to_string())?;
+    if io::stdin().read(&mut byte).map_err(|e| e.to_string())? == 0 {
+        return Ok(0x03);
+    }
     Ok(if byte[0] == b'\n' { b'\r' } else { byte[0] })
 }
 
