@@ -92,21 +92,32 @@ See [cpuville.rs](src/bin/cpuville.rs) or the CP/M 2.2 emulator [iz-cpm](https:/
 
 To run this example, execute: `cargo run --bin simplest`
 
-CPU modes are selected explicitly with constructors or `Cpu::new_for_mode`:
+### CPU modes
+
+CPU instruction decoding is selected explicitly with constructors or `Cpu::new_for_mode`:
 
 ```rust
 let cpu = Cpu::new_for_mode(CpuMode::Z80N);
 ```
 
-Available modes are `I8080`, `I8085`, `Z80`, `Z80N`, `Z180`, and `EZ80`.
+Available modes:
+
+- `Cpu::new_8080()` / `CpuMode::I8080`: Intel 8080-compatible decoding.
+- `Cpu::new_8085()` / `CpuMode::I8085`: Intel 8085 mode using the 8080-compatible instruction set.
+- `Cpu::new_z80()` / `CpuMode::Z80`: Zilog Z80 decoding. `Cpu::new()` is an alias for this mode.
+- `Cpu::new_z80n()` / `CpuMode::Z80N`: ZX Spectrum Next Z80N decoding, including implemented Next extensions such as `SWAPNIB`, `MIRROR A`, `TEST n`, `MUL D,E`, `ADD rr,A`, `ADD rr,nn`, and `NEXTREG`.
+- `Cpu::new_z180()` / `CpuMode::Z180`: Zilog Z180 decoding as Z80 plus implemented Z180 ED-prefix extensions such as `IN0`, `OUT0`, `TST`, `TSTIO`, `MLT`, `OTIM`/`OTDM`, and `SLP`.
+- `Cpu::new_ez80()` / `CpuMode::EZ80`: Zilog eZ80 decoding, including ADL mode and eZ80 size prefixes.
+
+Mode coverage is tested by `cargo test --test cpu_modes`. The Z80N and Z180 tests exercise opcodes that are unique to those modes and verify that plain Z80 mode does not enable Z80N extensions.
 
 ```rust
-use iz80::*;
+use ez80::*;
 
 fn main() {
     // Prepare the device
     let mut machine = PlainMachine::new();
-    let mut cpu = Cpu::new(); // Or Cpu::new_8080()
+    let mut cpu = Cpu::new(); // Or Cpu::new_for_mode(CpuMode::Z80N)
     cpu.set_trace(true);
 
     // Load program inline or from a file with:
@@ -114,11 +125,11 @@ fn main() {
     let code = [0x3c, 0xc3, 0x00, 0x00]; // INC A, JP $0000
     let size = code.len();
     for i in 0..size {
-        machine.poke(0x0000 + i as u16, code[i]);
+        machine.poke(i as u32, code[i]);
     }
 
     // Run emulation
-    cpu.registers().set_pc(0x0000);
+    cpu.state.set_pc(0x0000);
     loop {
         cpu.execute_instruction(&mut machine);
 
