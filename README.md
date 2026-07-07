@@ -111,6 +111,17 @@ Available modes:
 
 Mode coverage is tested by `cargo test --test cpu_modes`. The Z80N and Z180 tests exercise opcodes that are unique to those modes and verify that plain Z80 mode does not enable Z80N extensions.
 
+Opcode references generated from the emulator disassembler:
+
+- [Intel 8080 opcodes](docs/opcodes_8080.md)
+- [Intel 8085 opcodes](docs/opcodes_8085.md)
+- [Zilog Z80 opcodes](docs/opcodes_z80.md)
+- [ZX Spectrum Next Z80N opcodes](docs/opcodes_z80n.md)
+- [Zilog Z180 opcodes](docs/opcodes_z180.md)
+- [Zilog eZ80 opcodes](docs/opcodes_ez80.md)
+
+Regenerate opcode references with `cargo run --example generate_opcode_docs`.
+
 ```rust
 use ez80::*;
 
