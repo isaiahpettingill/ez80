@@ -20,6 +20,18 @@ pub struct Cpu {
     decoder: Box<dyn Decoder>,
     cycles: u64,
     fast_mode: FastMode,
+    mode: CpuMode,
+}
+
+/// CPU family/mode selected for instruction decoding.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum CpuMode {
+    I8080,
+    I8085,
+    Z80,
+    Z80N,
+    Z180,
+    EZ80,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -47,6 +59,22 @@ impl Cpu {
             decoder: Box::new(DecoderZ80::new()),
             cycles: 0,
             fast_mode: FastMode::Z80,
+            mode: CpuMode::Z80,
+        }
+    }
+
+    /// Returns a ZX Spectrum Next Z80N-compatible CPU instance.
+    ///
+    /// The Z80N mode runs the documented Z80-compatible instruction set plus
+    /// implemented ZX Spectrum Next extension opcodes.
+    pub fn new_z80n() -> Cpu {
+        Cpu {
+            state: State::new(),
+            trace: false,
+            decoder: Box::new(DecoderZ80::new_z80n()),
+            cycles: 0,
+            fast_mode: FastMode::Z80,
+            mode: CpuMode::Z80N,
         }
     }
 
@@ -57,6 +85,19 @@ impl Cpu {
             decoder: Box::new(DecoderEZ80::new()),
             cycles: 0,
             fast_mode: FastMode::EZ80,
+            mode: CpuMode::EZ80,
+        }
+    }
+
+    /// Returns a Zilog Z180 CPU instance.
+    pub fn new_z180() -> Cpu {
+        Cpu {
+            state: State::new(),
+            trace: false,
+            decoder: Box::new(DecoderZ80::new_z180()),
+            cycles: 0,
+            fast_mode: FastMode::Z80,
+            mode: CpuMode::Z180,
         }
     }
 
@@ -68,10 +109,31 @@ impl Cpu {
             decoder: Box::new(Decoder8080::new()),
             cycles: 0,
             fast_mode: FastMode::I8080,
+            mode: CpuMode::I8080,
         };
 
         cpu.state.reg.set_8080();
         cpu
+    }
+
+    /// Returns an Intel 8085 CPU instance.
+    pub fn new_8085() -> Cpu {
+        Cpu {
+            mode: CpuMode::I8085,
+            ..Self::new_8080()
+        }
+    }
+
+    /// Returns a CPU configured for the requested mode.
+    pub fn new_for_mode(mode: CpuMode) -> Cpu {
+        match mode {
+            CpuMode::I8080 => Self::new_8080(),
+            CpuMode::I8085 => Self::new_8085(),
+            CpuMode::Z80 => Self::new_z80(),
+            CpuMode::Z80N => Self::new_z80n(),
+            CpuMode::Z180 => Self::new_z180(),
+            CpuMode::EZ80 => Self::new_ez80(),
+        }
     }
 }
 
@@ -95,6 +157,11 @@ impl Cpu {
     /// Returns the fast-path CPU cycle counter.
     pub fn cycles(&self) -> u64 {
         self.cycles
+    }
+
+    /// Returns the selected CPU mode.
+    pub fn mode(&self) -> CpuMode {
+        self.mode
     }
 
     /// Sets the fast-path CPU cycle counter.

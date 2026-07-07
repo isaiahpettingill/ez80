@@ -133,6 +133,30 @@ pub fn build_tstio_n() -> Opcode {
     }
 }
 
+pub fn build_nextreg_n_a() -> Opcode {
+    Opcode {
+        name: "NEXTREG n, A".to_string(),
+        action: Box::new(move |env: &mut Environment| {
+            let register = env.advance_pc();
+            let value = env.state.reg.a();
+            env.port_out(0x243b, register);
+            env.port_out(0x253b, value);
+        }),
+    }
+}
+
+pub fn build_nextreg_n_n() -> Opcode {
+    Opcode {
+        name: "NEXTREG n, n".to_string(),
+        action: Box::new(move |env: &mut Environment| {
+            let register = env.advance_pc();
+            let value = env.advance_pc();
+            env.port_out(0x243b, register);
+            env.port_out(0x253b, value);
+        }),
+    }
+}
+
 fn inc_dec16or24(env: &mut Environment, rr: Reg16, inc: bool) -> u32 {
     if env.state.is_op_long() {
         env.state.reg.inc_dec24(rr, inc)

@@ -61,7 +61,7 @@ mod operators;
 pub mod disassembler;
 pub mod z80_mem_tools;
 
-pub use cpu::Cpu;
+pub use cpu::{Cpu, CpuMode};
 pub use environment::Environment;
 pub use fast_bus::FastBus;
 pub use machine::Machine;

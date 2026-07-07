@@ -57,6 +57,63 @@ pub fn build_tst_a_n() -> Opcode {
     }
 }
 
+pub fn build_swapnib() -> Opcode {
+    Opcode {
+        name: "SWAPNIB".to_string(),
+        action: Box::new(move |env: &mut Environment| {
+            let a = env.state.reg.a();
+            env.state.reg.set_a(a.rotate_left(4));
+        }),
+    }
+}
+
+pub fn build_mirror_a() -> Opcode {
+    Opcode {
+        name: "MIRROR A".to_string(),
+        action: Box::new(move |env: &mut Environment| {
+            let a = env.state.reg.a();
+            env.state.reg.set_a(a.reverse_bits());
+        }),
+    }
+}
+
+pub fn build_mul_de() -> Opcode {
+    Opcode {
+        name: "MUL D, E".to_string(),
+        action: Box::new(move |env: &mut Environment| {
+            let d = env.state.reg.get8(Reg8::D) as u16;
+            let e = env.state.reg.get8(Reg8::E) as u16;
+            env.state.reg.set16(Reg16::DE, d * e);
+        }),
+    }
+}
+
+pub fn build_add_rr_a(rr: Reg16) -> Opcode {
+    Opcode {
+        name: format!("ADD {:?}, A", rr),
+        action: Box::new(move |env: &mut Environment| {
+            let value = env
+                .state
+                .reg
+                .get16(rr)
+                .wrapping_add(env.state.reg.a() as u16);
+            env.state.reg.set16(rr, value);
+        }),
+    }
+}
+
+pub fn build_add_rr_nn(rr: Reg16) -> Opcode {
+    Opcode {
+        name: format!("ADD {:?}, nn", rr),
+        action: Box::new(move |env: &mut Environment| {
+            let lo = env.advance_pc() as u16;
+            let hi = env.advance_pc() as u16;
+            let value = env.state.reg.get16(rr).wrapping_add(lo | (hi << 8));
+            env.state.reg.set16(rr, value);
+        }),
+    }
+}
+
 pub fn build_operator_a_idx_offset(idx: Reg16, (op, name): (Operator, &str)) -> Opcode {
     Opcode {
         name: format!("{} A, ({:?}d)", name, idx),

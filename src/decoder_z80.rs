@@ -167,6 +167,18 @@ impl DecoderZ80 {
         decoder
     }
 
+    pub fn new_z80n() -> DecoderZ80 {
+        let mut decoder = Self::new();
+        decoder.load_z80n_prefix_ed();
+        decoder
+    }
+
+    pub fn new_z180() -> DecoderZ80 {
+        let mut decoder = Self::new();
+        decoder.load_z180_prefix_ed();
+        decoder
+    }
+
     fn load_no_prefix(&mut self) {
         for c in 0..=255 {
             let p = DecodingHelper::parts(c);
@@ -388,6 +400,69 @@ impl DecoderZ80 {
                         }
             */
             self.prefix_ed[c as usize] = opcode;
+        }
+    }
+
+    fn load_z80n_prefix_ed(&mut self) {
+        self.prefix_ed[0x23] = Some(build_swapnib());
+        self.prefix_ed[0x24] = Some(build_mirror_a());
+        self.prefix_ed[0x27] = Some(build_tst_a_n());
+        self.prefix_ed[0x30] = Some(build_mul_de());
+        self.prefix_ed[0x31] = Some(build_add_rr_a(Reg16::HL));
+        self.prefix_ed[0x32] = Some(build_add_rr_a(Reg16::DE));
+        self.prefix_ed[0x33] = Some(build_add_rr_a(Reg16::BC));
+        self.prefix_ed[0x34] = Some(build_add_rr_nn(Reg16::HL));
+        self.prefix_ed[0x35] = Some(build_add_rr_nn(Reg16::DE));
+        self.prefix_ed[0x36] = Some(build_add_rr_nn(Reg16::BC));
+        self.prefix_ed[0x91] = Some(build_nextreg_n_a());
+        self.prefix_ed[0x92] = Some(build_nextreg_n_n());
+    }
+
+    fn load_z180_prefix_ed(&mut self) {
+        for c in 0..=255 {
+            let p = DecodingHelper::parts(c);
+            let opcode = match p.x {
+                0 => match p.z {
+                    0 => match p.y {
+                        0 | 1 | 2 | 3 | 4 | 5 | 7 => Some(build_in0_r_n(R[p.y])),
+                        _ => None,
+                    },
+                    1 => match p.y {
+                        6 => None,
+                        _ => Some(build_out0_n_r(R[p.y])),
+                    },
+                    4 => Some(build_tst_a_r(R[p.y])),
+                    _ => None,
+                },
+                1 => match p.z {
+                    4 => match p.y {
+                        1 | 3 | 5 | 7 => Some(build_mlt_rr(RP[p.p])),
+                        4 => Some(build_tst_a_n()),
+                        6 => Some(build_tstio_n()),
+                        _ => None,
+                    },
+                    6 => match p.y {
+                        6 => Some(build_slp()),
+                        _ => None,
+                    },
+                    _ => None,
+                },
+                2 => match p.z {
+                    3 => match p.y {
+                        0 => Some(build_otim_otdm(true, false)),
+                        1 => Some(build_otim_otdm(false, false)),
+                        2 => Some(build_otim_otdm(true, true)),
+                        3 => Some(build_otim_otdm(false, true)),
+                        _ => None,
+                    },
+                    _ => None,
+                },
+                _ => None,
+            };
+
+            if opcode.is_some() {
+                self.prefix_ed[c as usize] = opcode;
+            }
         }
     }
 

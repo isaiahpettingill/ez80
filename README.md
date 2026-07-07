@@ -92,6 +92,14 @@ See [cpuville.rs](src/bin/cpuville.rs) or the CP/M 2.2 emulator [iz-cpm](https:/
 
 To run this example, execute: `cargo run --bin simplest`
 
+CPU modes are selected explicitly with constructors or `Cpu::new_for_mode`:
+
+```rust
+let cpu = Cpu::new_for_mode(CpuMode::Z80N);
+```
+
+Available modes are `I8080`, `I8085`, `Z80`, `Z80N`, `Z180`, and `EZ80`.
+
 ```rust
 use iz80::*;
 
