@@ -47,6 +47,7 @@ mod state;
 
 mod decoder_8080;
 mod decoder_ez80;
+mod decoder_gameboy;
 mod decoder_z80;
 mod environment;
 mod opcode;

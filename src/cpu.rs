@@ -1,5 +1,6 @@
 use super::decoder_8080::*;
 use super::decoder_ez80::*;
+use super::decoder_gameboy::*;
 use super::decoder_z80::*;
 use super::environment::*;
 use super::fast_bus::FastBus;
@@ -32,6 +33,8 @@ pub enum CpuMode {
     Z80N,
     Z180,
     EZ80,
+    /// Nintendo Game Boy Sharp LR35902-compatible decoding.
+    GameBoy,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -39,6 +42,7 @@ enum FastMode {
     Z80,
     EZ80,
     I8080,
+    GameBoy,
 }
 
 pub(crate) trait Decoder {
@@ -86,6 +90,21 @@ impl Cpu {
             cycles: 0,
             fast_mode: FastMode::EZ80,
             mode: CpuMode::EZ80,
+        }
+    }
+
+    /// Returns a Nintendo Game Boy Sharp LR35902-compatible CPU instance.
+    ///
+    /// This mode provides the Game Boy's distinct opcode map, flags, and
+    /// 16-bit address space. It does not emulate Game Boy peripherals.
+    pub fn new_gameboy() -> Cpu {
+        Cpu {
+            state: State::new(),
+            trace: false,
+            decoder: Box::new(DecoderGameBoy::new()),
+            cycles: 0,
+            fast_mode: FastMode::GameBoy,
+            mode: CpuMode::GameBoy,
         }
     }
 
@@ -140,6 +159,7 @@ impl Cpu {
             CpuMode::Z80N => Self::new_z80n(),
             CpuMode::Z180 => Self::new_z180(),
             CpuMode::EZ80 => Self::new_ez80(),
+            CpuMode::GameBoy => Self::new_gameboy(),
         }
     }
 }
@@ -181,7 +201,7 @@ impl Cpu {
         match self.fast_mode {
             FastMode::Z80 => step_z80_fast(&mut self.state, &mut self.cycles, bus),
             FastMode::EZ80 => step_ez80_fast(&mut self.state, &mut self.cycles, bus),
-            FastMode::I8080 => {
+            FastMode::I8080 | FastMode::GameBoy => {
                 panic!("step_fast currently supports Cpu::new_z80() and Cpu::new_ez80()")
             }
         }
@@ -305,7 +325,7 @@ impl Cpu {
     /// # Arguments
     ///
     /// * `sys` - A representation of the emulated machine that has the Machine trait
-    ///  
+    ///
     pub fn disasm_instruction(&mut self, sys: &mut dyn Machine) -> String {
         let mut env = Environment::new(&mut self.state, sys);
         let opcode = self.decoder.decode(&mut env);

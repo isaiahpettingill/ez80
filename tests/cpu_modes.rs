@@ -16,6 +16,7 @@ fn constructors_select_clear_modes() {
     assert_eq!(CpuMode::Z80N, Cpu::new_z80n().mode());
     assert_eq!(CpuMode::Z180, Cpu::new_z180().mode());
     assert_eq!(CpuMode::EZ80, Cpu::new_ez80().mode());
+    assert_eq!(CpuMode::GameBoy, Cpu::new_gameboy().mode());
 
     for mode in [
         CpuMode::I8080,
@@ -24,6 +25,7 @@ fn constructors_select_clear_modes() {
         CpuMode::Z80N,
         CpuMode::Z180,
         CpuMode::EZ80,
+        CpuMode::GameBoy,
     ] {
         assert_eq!(mode, Cpu::new_for_mode(mode).mode());
     }
@@ -236,6 +238,42 @@ fn z180_runs_z180_extended_opcodes() {
 
     run(&[0xed, 0x76], &mut cpu, &mut machine); // SLP
     assert!(cpu.is_halted());
+}
+
+#[test]
+fn gameboy_mode_uses_lr35902_opcodes_and_flags() {
+    let mut cpu = Cpu::new_gameboy();
+    let mut machine = PlainMachine::new();
+
+    // Game Boy-only immediate high-memory load/store instructions.
+    cpu.registers().set_a(0x5a);
+    run(&[0xe0, 0x80], &mut cpu, &mut machine); // LDH ($80),A
+    assert_eq!(0x5a, machine.peek(0xff80));
+    cpu.registers().set_a(0);
+    run(&[0xf0, 0x80], &mut cpu, &mut machine); // LDH A,($80)
+    assert_eq!(0x5a, cpu.registers().a());
+
+    // The LR35902 F register only retains Z/N/H/C, unlike a Z80 F register.
+    cpu.registers().set_a(0x0f);
+    run(&[0xc6, 0x01], &mut cpu, &mut machine); // ADD A,$01
+    assert_eq!(0x10, cpu.registers().a());
+    assert_eq!(0x20, cpu.registers().get8(Reg8::F));
+
+    // Signed SP arithmetic uses the low-byte and low-nibble carry rules.
+    cpu.registers().set16(Reg16::SP, 0x00ff);
+    run(&[0xf8, 0x01], &mut cpu, &mut machine); // LD HL,SP+$01
+    assert_eq!(0x0100, cpu.registers().get16(Reg16::HL));
+    assert_eq!(0x30, cpu.registers().get8(Reg8::F));
+
+    // CB $30 is Game Boy SWAP, not a Z80 shift opcode.
+    cpu.registers().set8(Reg8::B, 0xf0);
+    run(&[0xcb, 0x30], &mut cpu, &mut machine);
+    assert_eq!(0x0f, cpu.registers().get8(Reg8::B));
+    assert_eq!(0x00, cpu.registers().get8(Reg8::F));
+
+    // A Z80-only DD prefix is an illegal LR35902 instruction.
+    run(&[0xdd], &mut cpu, &mut machine);
+    assert!(cpu.state.illegal_instruction);
 }
 
 #[test]

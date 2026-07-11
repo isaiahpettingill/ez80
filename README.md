@@ -122,8 +122,17 @@ Available modes:
 - `Cpu::new_z80n()` / `CpuMode::Z80N`: ZX Spectrum Next Z80N decoding, including Next extensions such as `SWAPNIB`, `MIRROR A`, `TEST n`, `BSLA`/`BSRA`/`BSRL`/`BSRF`/`BRLC`, `MUL D,E`, `ADD rr,A`, `ADD rr,nn`, `PUSH nn`, `OUTINB`, `NEXTREG`, `PIXELDN`, `PIXELAD`, `SETAE`, `JP (C)`, `LDIX`, `LDWS`, `LDDX`, `LDIRX`, `LDPIRX`, and `LDDRX`.
 - `Cpu::new_z180()` / `CpuMode::Z180`: Zilog Z180 decoding as Z80 plus implemented Z180 ED-prefix extensions such as `IN0`, `OUT0`, `TST`, `TSTIO`, `MLT`, `OTIM`/`OTDM`, and `SLP`.
 - `Cpu::new_ez80()` / `CpuMode::EZ80`: Zilog eZ80 decoding, including ADL mode and eZ80 size prefixes.
+- `Cpu::new_gameboy()` / `CpuMode::GameBoy`: Nintendo Game Boy Sharp LR35902 decoding, including its distinct `CB` opcodes, four-bit `Z/N/H/C` flags, `LDH` instructions, and 16-bit address space. This mode is CPU-only; Game Boy hardware remains the responsibility of the hosting `Machine`.
 
 Mode coverage is tested by `cargo test --test cpu_modes`. The Z80N and Z180 tests exercise opcodes that are unique to those modes and verify that plain Z80 mode does not enable Z80N extensions.
+
+An opt-in Game Boy ROM integration smoke suite runs representative [Mooneye](https://github.com/Gekkio/mooneye-test-suite/) CPU test-ROM startup paths from [c-sp/game-boy-test-roms](https://github.com/c-sp/game-boy-test-roms). Download and unpack its v7.0 release, then run:
+
+```shell
+GAME_BOY_TEST_ROMS_DIR=/path/to/game-boy-test-roms-v7.0 cargo test --test gameboy_test_roms -- --ignored
+```
+
+The test uses `PlainMachine` and validates LR35902 decoding only. Full Mooneye acceptance results require a Game Boy-specific `Machine` that models timers, the interrupt controller, and the PPU.
 
 Opcode references generated from the emulator disassembler:
 
