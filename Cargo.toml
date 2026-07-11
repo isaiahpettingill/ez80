@@ -1,11 +1,11 @@
 [package]
 name = "ez80"
-version = "0.4.5"
+version = "0.5.0"
 authors = ["Tom Morton", "isaiahpettingill <git.wolverine899@passfwd.com>"]
 edition = "2018"
 license = "BSD-3-Clause"
-description = "Zilog eZ80, Z80 and Intel 8080 emulator"
-keywords = ["ez80", "z80", "8080", "cpm", "emulator"]
+description = "Zilog eZ80, Z80, Intel 8080, and Game Boy LR35902 emulator"
+keywords = ["ez80", "z80", "8080", "gameboy", "emulator"]
 homepage = "https://github.com/isaiahpettingill/ez80"
 repository = "https://github.com/isaiahpettingill/ez80"
 readme = "README.md"
